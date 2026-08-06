@@ -39,7 +39,6 @@ st.sidebar.header("⚙️ System Configurations")
 BUILTIN_API_KEY = "" 
 api_key = st.sidebar.text_input("OpenRouter API Key", value=BUILTIN_API_KEY, type="password")
 
-# Updated Model List (Removed Claude to avoid 404 error, using active working models)
 model_name = st.sidebar.selectbox(
     "Select AI Model via OpenRouter",
     [
@@ -51,7 +50,7 @@ model_name = st.sidebar.selectbox(
 
 # App Header
 st.markdown('<p class="main-header">🏛️ KP Secretariat - Infrastructure Section AI Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, Interactive Mapping, Word (.docx) Export & Revision Comparison</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, Interactive Mapping, Downloadable Map, Word Export & Revision Comparison</p>', unsafe_allow_html=True)
 st.markdown("---")
 
 # Navigation Tabs
@@ -66,31 +65,41 @@ with tab1:
     st.markdown("### 🗺️ Project Site Mapping & Cost Breakdown Dashboard")
     uploaded_file_t1 = st.file_uploader("Upload PC-1 / Feasibility PDF for Dashboard Analysis", type=["pdf"], key="t1_file")
     
-    if uploaded_file_t1 is not None:
-        reader = pypdf.PdfReader(uploaded_file_t1)
-        pdf_text_t1 = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown("#### 📍 Project Location & Site Details")
+        # Interactive Map centered around Peshawar / KP
+        m = folium.Map(location=[34.0151, 71.5249], zoom_start=8)
+        folium.Marker(
+            [34.0151, 71.5249], 
+            popup="KP Infrastructure Project Site", 
+            tooltip="Khyber Pakhtunkhwa Secretariat"
+        ).add_to(m)
         
-        col1, col2 = st.columns([1, 1])
+        # Display Map in Streamlit
+        st_folium(m, width=500, height=350)
         
-        with col1:
-            st.markdown("#### 📍 Project Location & Site Details")
-            m = folium.Map(location=[34.0151, 71.5249], zoom_start=8)
-            folium.Marker(
-                [34.0151, 71.5249], 
-                popup="KP Infrastructure Project Site", 
-                tooltip="Khyber Pakhtunkhwa Secretariat"
-            ).add_to(m)
-            st_folium(m, width=500, height=350)
-            
-        with col2:
-            st.markdown("#### 💰 Financial Expenses Summary Table")
-            data = {
-                "Cost Category": ["Civil Works", "Machinery & Equipment", "Land Acquisition", "Environmental & Social", "Contingencies", "Total Estimated Cost"],
-                "Allocated Budget (PKR Million)": [350.5, 120.0, 45.0, 15.0, 20.5, 551.0],
-                "Status": ["Approved", "Pending", "Approved", "In Review", "Approved", "Verified"]
-            }
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
+        # Download Map Feature (.html format)
+        map_file_path = "project_site_map.html"
+        m.save(map_file_path)
+        with open(map_file_path, "rb") as map_file:
+            st.download_button(
+                label="📥 Download Interactive Map (.html)",
+                data=map_file,
+                file_name="KP_Project_Site_Map.html",
+                mime="text/html"
+            )
+        
+    with col2:
+        st.markdown("#### 💰 Financial Expenses Summary Table")
+        data = {
+            "Cost Category": ["Civil Works", "Machinery & Equipment", "Land Acquisition", "Environmental & Social", "Contingencies", "Total Estimated Cost"],
+            "Allocated Budget (PKR Million)": [350.5, 120.0, 45.0, 15.0, 20.5, 551.0],
+            "Status": ["Approved", "Pending", "Approved", "In Review", "Approved", "Verified"]
+        }
+        df = pd.DataFrame(data)
+        st.dataframe(df, use_container_width=True)
 
 # --- TAB 2: OFFICIAL REPLY & WORD EXPORT ---
 with tab2:
@@ -144,7 +153,10 @@ with tab2:
                     st.markdown("### 📋 Generated Official Draft Preview")
                     st.markdown(response_text)
                     
+                    # Create Word Document (.docx) with KPK Logo and Clean Formatting
                     doc = Document()
+                    
+                    # Add Logo if available in root folder
                     if os.path.exists("kpk_logo.png"):
                         doc.add_picture("kpk_logo.png", width=Inches(1.2))
                     
@@ -156,8 +168,22 @@ with tab2:
                     
                     doc.add_paragraph("----------------------------------------------------------------------------------")
                     
-                    for paragraph in response_text.split("\n\n"):
-                        doc.add_paragraph(paragraph)
+                    # Clean parsing loop to remove markdown symbols (##, **, etc.) and format properly
+                    for line in response_text.split("\n"):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        
+                        # Remove markdown tags for clean document formatting
+                        clean_line = line.replace("**", "").replace("###", "").replace("##", "").replace("#", "").strip()
+                        
+                        if line.startswith("###") or line.startswith("##") or line.startswith("#"):
+                            doc.add_heading(clean_line, level=2)
+                        elif line.startswith("|"):
+                            doc.add_paragraph(clean_line)
+                        else:
+                            p_para = doc.add_paragraph(clean_line)
+                            p_para.paragraph_format.line_spacing = 1.15
                         
                     output_file_path = "KP_Official_Report.docx"
                     doc.save(output_file_path)
