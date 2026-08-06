@@ -50,38 +50,90 @@ model_name = st.sidebar.selectbox(
 
 # App Header
 st.markdown('<p class="main-header">🏛️ KP Secretariat - Infrastructure Section AI Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, Interactive Mapping, Downloadable Map, Word Export & Revision Comparison</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, Dynamic ADP Area Mapping, Word Export & Revision Comparison</p>', unsafe_allow_html=True)
 st.markdown("---")
 
 # Navigation Tabs
 tab1, tab2, tab3 = st.tabs([
-    "📊 Dashboard & Interactive Map", 
+    "📊 Dashboard & Dynamic Map", 
     "📝 Official Reply & Word Export", 
     "⚖️ PC-1 Revision Comparison"
 ])
 
-# --- TAB 1: DASHBOARD & MAP ---
+# KP Districts Coordinates Database for Mapping
+KP_DISTRICTS_DB = {
+    "Peshawar": [34.0151, 71.5249],
+    "Mardan": [34.1989, 72.0406],
+    "Swat": [34.7717, 72.3602],
+    "Abbottabad": [34.1463, 73.2117],
+    "Bannu": [32.9889, 70.6042],
+    "Dera Ismail Khan": [31.8314, 70.9014],
+    "Kohat": [33.5889, 71.4429],
+    "Swabi": [34.1167, 72.4667],
+    "Nowshera": [34.0153, 71.9747],
+    "Charsadda": [34.1526, 71.7381],
+    "Mansehra": [34.3333, 73.2000],
+    "Haripur": [33.9994, 72.9342]
+}
+
+# --- TAB 1: DASHBOARD & DYNAMIC MAP ---
 with tab1:
-    st.markdown("### 🗺️ Project Site Mapping & Cost Breakdown Dashboard")
-    uploaded_file_t1 = st.file_uploader("Upload PC-1 / Feasibility PDF for Dashboard Analysis", type=["pdf"], key="t1_file")
+    st.markdown("### 🗺️ ADP Project Site Mapping & Cost Breakdown Dashboard")
+    uploaded_file_t1 = st.file_uploader("Upload ADP / PC-1 PDF for Dynamic Mapping", type=["pdf"], key="t1_file")
     
-    # Map aur Table ab sirf PDF upload hone par hi show honge
     if uploaded_file_t1 is not None:
-        with st.spinner("Processing PDF for Map & Financial Summary..."):
+        with st.spinner("Analyzing document for project locations and financial data..."):
             reader = pypdf.PdfReader(uploaded_file_t1)
             pdf_text_t1 = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
+            
+            # Detect which districts are mentioned in the uploaded PDF text
+            detected_districts = []
+            for district in KP_DISTRICTS_DB.keys():
+                if district.lower() in pdf_text_t1.lower():
+                    detected_districts.append(district)
+            
+            # Fallback agar koi specific district text mein na mile toh default Peshawar/KP rakhein
+            if not detected_districts:
+                detected_districts = ["Peshawar", "Mardan", "Swat"] # Sample default for demonstration
             
             col1, col2 = st.columns([1, 1])
             
             with col1:
-                st.markdown("#### 📍 Project Location & Site Details")
-                # Interactive Map centered around Peshawar / KP
-                m = folium.Map(location=[34.0151, 71.5249], zoom_start=8)
-                folium.Marker(
-                    [34.0151, 71.5249], 
-                    popup="KP Infrastructure Project Site", 
-                    tooltip="Khyber Pakhtunkhwa Secretariat"
-                ).add_to(m)
+                st.markdown(f"#### 📍 Project Locations Found: {', '.join(detected_districts)}")
+                
+                # Center map around the first detected district
+                center_coords = KP_DISTRICTS_DB.get(detected_districts[0], [34.0151, 71.5249])
+                m = folium.Map(location=center_coords, zoom_start=8)
+                
+                # Add markers and overall work area circle
+                lat_list = []
+                lon_list = []
+                for dist in detected_districts:
+                    coords = KP_DISTRICTS_DB[dist]
+                    lat_list.append(coords[0])
+                    lon_list.append(coords[1])
+                    
+                    # Add individual project point marker
+                    folium.Marker(
+                        coords, 
+                        popup=f"ADP Project Site: {dist}", 
+                        tooltip=f"{dist} ADP Zone",
+                        icon=folium.Icon(color="red", icon="info-sign")
+                    ).add_to(m)
+                
+                # Draw overall work area circle covering the project zones
+                if lat_list and lon_list:
+                    avg_lat = sum(lat_list) / len(lat_list)
+                    avg_lon = sum(lon_list) / len(lon_list)
+                    folium.Circle(
+                        location=[avg_lat, avg_lon],
+                        radius=45000, # 45km radius covering overall work region
+                        color="#1E3A8A",
+                        fill=True,
+                        fill_color="#3B82F6",
+                        fill_opacity=0.2,
+                        tooltip="Overall ADP Work Scope Region"
+                    ).add_to(m)
                 
                 # Display Map in Streamlit
                 st_folium(m, width=500, height=350)
@@ -93,7 +145,7 @@ with tab1:
                     st.download_button(
                         label="📥 Download Interactive Map (.html)",
                         data=map_file,
-                        file_name="KP_Project_Site_Map.html",
+                        file_name="KP_ADP_Project_Map.html",
                         mime="text/html"
                     )
                 
@@ -107,7 +159,7 @@ with tab1:
                 df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
     else:
-        st.info("👆 Please upload a PC-1 / Feasibility PDF file above to view the interactive map and financial expenses dashboard.")
+        st.info("👆 Please upload an ADP / PC-1 PDF file above to automatically detect project areas and render the dynamic map.")
 
 # --- TAB 2: OFFICIAL REPLY & WORD EXPORT ---
 with tab2:
@@ -164,7 +216,6 @@ with tab2:
                     # Create Word Document (.docx) with KPK Logo and Clean Formatting
                     doc = Document()
                     
-                    # Add Logo if available in root folder
                     if os.path.exists("kpk_logo.png"):
                         doc.add_picture("kpk_logo.png", width=Inches(1.2))
                     
@@ -176,7 +227,6 @@ with tab2:
                     
                     doc.add_paragraph("----------------------------------------------------------------------------------")
                     
-                    # Clean parsing loop to remove markdown symbols (##, **, etc.) and format properly
                     for line in response_text.split("\n"):
                         line = line.strip()
                         if not line:
