@@ -1,10 +1,10 @@
 import streamlit as st
 import pypdf
-import os
+from openai import OpenAI
 
 # Page Configuration
 st.set_page_config(
-    page_title="KP Infra AI Portal - Open Source Models",
+    page_title="KP Infra AI Portal - Pro Edition",
     page_icon="🏛️",
     layout="wide"
 )
@@ -26,118 +26,123 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar for Open Source AI Configurations
-st.sidebar.header("⚙️ Open Source AI Settings")
-api_provider = st.sidebar.selectbox(
-    "Choose Open Source Provider",
-    ["Groq (Fast Open Source API)", "Hugging Face Inference API", "Ollama (Local Offline)"]
+# Sidebar Configurations
+st.sidebar.header("⚙️ System Configurations")
+
+# Built-in OpenRouter API Key
+BUILTIN_API_KEY = "" 
+api_key = st.sidebar.text_input("OpenRouter API Key", value=BUILTIN_API_KEY, type="password")
+
+# OpenRouter Model Selection
+model_name = st.sidebar.selectbox(
+    "Select AI Model via OpenRouter",
+    [
+        "meta-llama/llama-3.3-70b-instruct",
+        "deepseek/deepseek-chat",
+        "anthropic/claude-3.5-sonnet",
+        "google/gemini-flash-1.5"
+    ]
 )
-
-api_key = st.sidebar.text_input("Enter API Key / Token", type="password", help="Get free API key from Groq or Hugging Face")
-
-# Open Source Model Selection
-if "Groq" in api_provider:
-    model_name = st.sidebar.selectbox(
-        "Select Open Source Model",
-        ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]
-    )
-elif "Hugging Face" in api_provider:
-    model_name = st.sidebar.text_input("HF Model ID", value="meta-llama/Meta-Llama-3-70B-Instruct")
-else:
-    model_name = st.sidebar.text_input("Ollama Model Name", value="llama3")
 
 # App Header
 st.markdown('<p class="main-header">🏛️ KP Secretariat - Infrastructure Section AI Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Powered by Top Open-Source AI Models (Llama, Mixtral, Gemma)</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Powered by OpenRouter & Advanced Open-Source Models for PC-1 & P&D Documents</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# Styled File Uploader with the exact requirement
+# Main File Uploader with the exact required label
 uploaded_file = st.file_uploader(
     label="📁 Upload your PDF to get surprised",
     type=["pdf"],
-    help="Drag and drop your PC-1 document, feasibility report, or P&D observation letter here."
+    help="Upload your PC-1, PC-2, feasibility report or P&D observation letter."
 )
 
 if uploaded_file is not None:
-    with st.spinner("Reading PDF document..."):
+    with st.spinner("Reading PDF document into memory..."):
         reader = pypdf.PdfReader(uploaded_file)
         pdf_text = ""
-        for page in reader.pages:
-            if page.extract_text():
-                pdf_text += page.extract_text() + "\n"
+        total_pages = len(reader.pages)
+        
+        for i, page in enumerate(reader.pages):
+            text = page.extract_text()
+            if text:
+                pdf_text += f"\n--- Page {i+1} ---\n" + text
                 
-    st.success("✨ PDF uploaded successfully! Document loaded into memory.")
+    st.success(f"✨ PDF uploaded successfully! Total pages read: {total_pages}")
     
-    # Expandable preview of text
-    with st.expander("🔍 View Extracted Text Preview"):
-        st.text(pdf_text[:1200] + "..." if len(pdf_text) > 1200 else pdf_text)
+    # Text Preview with expander
+    with st.expander("🔍 View Extracted Document Content Preview"):
+        st.text(pdf_text[:2000] + "\n... [Content Truncated for Preview] ...")
 
-    st.markdown("### ⚙️ Select Action")
+    st.markdown("### ⚙️ Select Action Task")
     task_option = st.selectbox(
         "Choose what you want the AI to do with this document:",
         [
             "Generate Official Reply to P&D Observations",
-            "Summarize PC-1 / PC-2 Feasibility Report",
-            "Draft Project Justification & Scope"
+            "Comprehensive PC-1 / PC-2 Feasibility Summary",
+            "Draft Project Justification, Scope & Cost Breakdown"
         ]
     )
 
-    user_prompt = st.text_area("Additional instructions or specific points to address:", placeholder="Misal ke tor par: Is observation ka jawab jaldi aur rules ke mutabiq dein...")
+    user_prompt = st.text_area(
+        "Additional instructions or specific sections to focus on (Optional):", 
+        placeholder="Misal ke tor par: Is report mein cost estimation aur CSR rates par focus karein..."
+    )
 
-    # Main Action Button
+    # Action Button
     if st.button("🚀 Get Surprised (Process & Generate Details)", type="primary"):
-        if not api_key and "Ollama" not in api_provider:
-            st.error("⚠️ Please enter your API Key in the sidebar first!")
+        if not api_key:
+            st.error("⚠️ Please provide a valid OpenRouter API Key!")
         else:
-            with st.spinner(f"Processing using open-source model ({model_name})..."):
+            with st.spinner(f"Analyzing document using {model_name}..."):
                 
-                response_text = ""
                 try:
-                    if "Groq" in api_provider:
-                        from groq import Groq
-                        client = Groq(api_key=api_key)
-                        
-                        system_prompt = "You are an expert Chief Engineer and Planning Officer in the KP Secretariat, Pakistan. Help draft official PC-1, PC-2 replies and address P&D observations professionally."
-                        user_content = f"Task: {task_option}\nAdditional Instructions: {user_prompt}\n\nDocument Content:\n{pdf_text[:12000]}"
-                        
-                        chat_completion = client.chat.completions.create(
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_content}
-                            ],
-                            model=model_name,
-                        )
-                        response_text = chat_completion.choices[0].message.content
-                        
-                    else:
-                        # Fallback simulation block if local/huggingface client setup requires explicit endpoint handling
-                        response_text = f"""### 📋 KP Secretariat - Open Source AI Report ({model_name})
-**Task Selected:** {task_option}
-**File Processed:** {uploaded_file.name}
+                    # OpenRouter client configuration using OpenAI SDK base_url
+                    client = OpenAI(
+                        base_url="https://openrouter.ai/api/v1",
+                        api_key=api_key,
+                    )
+                    
+                    system_prompt = (
+                        "You are an expert Chief Engineer, Planning Officer, and Infrastructure Specialist "
+                        "in the Government of Khyber Pakhtunkhwa (KP) Secretariat. Your job is to review "
+                        "PC-1, PC-2 documents, feasibility reports, and P&D/Finance department observations, "
+                        "and write highly professional, accurate, and detailed official government drafts "
+                        "compliant with provincial development rules and CSR standards."
+                    )
+                    
+                    user_content = f"""
+Selected Task: {task_option}
+Additional User Instructions: {user_prompt}
 
----
-#### 1. Official Analysis & Findings:
-- Document successfully parsed and processed via open-source model architecture.
-- Cross-checked against standard KP Infrastructure guidelines and CSR criteria.
+Document Content:
+{pdf_text[:35000]}
 
-#### 2. Generated Official Draft Response:
-- **Status:** Compliance ensured as per provincial development standards.
-- **Technical Justification:** Formulated professional rebuttal/draft addressing P&D and Finance Department parameters.
-
-#### 3. Recommended Next Steps for Infra Section:
-1. Incorporate these recommendations into final PC-1 Part-B.
-2. Secure sign-off from respective section authorities before re-submission.
+Please provide a comprehensive, complete, and professionally structured response without cutting short.
 """
+                    
+                    completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content}
+                        ],
+                        max_tokens=4000,
+                        temperature=0.2
+                    )
+                    
+                    response_text = completion.choices[0].message.content
+                    
+                    st.markdown("---")
+                    st.markdown("### 📋 AI Generated Official Report / Draft")
+                    st.markdown(response_text)
+                    
+                    # Download Button
+                    st.download_button(
+                        label="📥 Download Complete Report (.txt)",
+                        data=response_text,
+                        file_name="KP_Infra_Official_Report.txt",
+                        mime="text/plain"
+                    )
+                    
                 except Exception as e:
-                    response_text = f"❌ Error connecting to open-source API: {str(e)}\n\n(Please check your API key or network connection)"
-
-                st.markdown("---")
-                st.markdown(response_text)
-                
-                # Download Button for the generated response
-                st.download_button(
-                    label="📥 Download Full Report (.txt)",
-                    data=response_text,
-                    file_name="KP_Infra_OpenSource_Report.txt",
-                    mime="text/plain"
-                )
+                    st.error(f"❌ An error occurred during processing: {str(e)}")
