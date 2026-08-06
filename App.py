@@ -39,13 +39,13 @@ st.sidebar.header("⚙️ System Configurations")
 BUILTIN_API_KEY = "" 
 api_key = st.sidebar.text_input("OpenRouter API Key", value=BUILTIN_API_KEY, type="password")
 
+# Updated Model List (Removed Claude to avoid 404 error, using active working models)
 model_name = st.sidebar.selectbox(
     "Select AI Model via OpenRouter",
     [
         "meta-llama/llama-3.3-70b-instruct",
-        "deepseek/deepseek-chat",
-        "anthropic/claude-3.5-sonnet",
-        "google/gemini-flash-1.5"
+        "google/gemini-flash-1.5",
+        "deepseek/deepseek-chat"
     ]
 )
 
@@ -74,7 +74,6 @@ with tab1:
         
         with col1:
             st.markdown("#### 📍 Project Location & Site Details")
-            # Interactive Map centered around Peshawar / KP
             m = folium.Map(location=[34.0151, 71.5249], zoom_start=8)
             folium.Marker(
                 [34.0151, 71.5249], 
@@ -145,10 +144,7 @@ with tab2:
                     st.markdown("### 📋 Generated Official Draft Preview")
                     st.markdown(response_text)
                     
-                    # Create Word Document (.docx) with KPK Logo
                     doc = Document()
-                    
-                    # Add Logo if available in root folder
                     if os.path.exists("kpk_logo.png"):
                         doc.add_picture("kpk_logo.png", width=Inches(1.2))
                     
@@ -160,7 +156,6 @@ with tab2:
                     
                     doc.add_paragraph("----------------------------------------------------------------------------------")
                     
-                    # Add Content Paragraphs
                     for paragraph in response_text.split("\n\n"):
                         doc.add_paragraph(paragraph)
                         
