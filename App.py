@@ -2,47 +2,12 @@ import streamlit as st
 import pypdf
 import pandas as pd
 import os
-import sqlite3
-from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from openai import OpenAI
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-# SQLite Database Initialization for History & Session Storage
-def init_db():
-    conn = sqlite3.connect('kp_portal_history.db', check_same_thread=False)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS generated_reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            task_type TEXT,
-            content TEXT,
-            timestamp TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-def save_report_to_db(title, task_type, content):
-    conn = sqlite3.connect('kp_portal_history.db', check_same_thread=False)
-    c = conn.cursor()
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    c.execute("INSERT INTO generated_reports (title, task_type, content, timestamp) VALUES (?, ?, ?, ?)", 
-              (title, task_type, content, timestamp))
-    conn.commit()
-    conn.close()
-
-def get_all_reports():
-    conn = sqlite3.connect('kp_portal_history.db', check_same_thread=False)
-    df_hist = pd.read_sql_query("SELECT * FROM generated_reports ORDER BY id DESC", conn)
-    conn.close()
-    return df_hist
 
 # Page Configuration
 st.set_page_config(
@@ -85,16 +50,16 @@ model_name = st.sidebar.selectbox(
 
 # App Header
 st.markdown('<p class="main-header">🏛️ KP Secretariat - Infrastructure Section AI Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, OCR, Audit Compliance, SQLite History & Dynamic Mapping</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, OCR, Audit Compliance & Dynamic Mapping</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# Navigation Tabs (5 Advanced Tabs)
+# Navigation Tabs (5 Tabs)
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Dashboard & Map", 
     "📝 Official Report", 
     "⚖️ Comparison",
     "💬 Chat with PDF",
-    "📜 History & Audit Compliance"
+    "🔍 AI Audit Compliance"
 ])
 
 # Helper Function for OCR / Text Extraction
@@ -106,9 +71,8 @@ def extract_text_from_pdf(uploaded_file):
         if extracted:
             text += extracted + "\n"
     
-    # Fallback or OCR notification if text is minimal (Scanned PDF handling placeholder)
     if len(text.strip()) < 50:
-        st.warning("⚠️ Yeh PDF scanned lag rahi hai. Agar text extract na ho toh k baraye meharbani searchable PDF upload karein.")
+        st.warning("⚠️ Yeh PDF scanned lag rahi hai. Agar text extract na ho toh baraye meharbani searchable PDF upload karein.")
     return text
 
 KP_DISTRICTS_DB = {
@@ -253,9 +217,6 @@ with tab2:
                     st.markdown("### 📋 Generated Official Draft Preview")
                     st.markdown(response_text)
                     
-                    # Save into SQLite Database History
-                    save_report_to_db(base_name, task_option, response_text)
-                    
                     doc = Document()
                     if os.path.exists("kpk_logo.png"):
                         doc.add_picture("kpk_logo.png", width=Inches(1.2))
@@ -372,8 +333,6 @@ File 2 Extract:
                     st.markdown("### 📊 Comparative Analysis Report")
                     st.markdown(comparison_result)
                     
-                    save_report_to_db(f"{base_name_c1} vs {base_name_c2}", "Comparison", comparison_result)
-                    
                     comp_doc = Document()
                     comp_doc.add_heading(f"Comparative Analysis: {base_name_c1} vs {base_name_c2}", level=1)
                     comp_doc.add_paragraph(comparison_result)
@@ -422,42 +381,21 @@ with tab4:
     else:
         st.info("👆 Pehle upar file upload karein taake aap AI se uske baray mein sawal pooch saken.")
 
-# --- TAB 5: HISTORY & AUTOMATED AUDIT COMPLIANCE ---
+# --- TAB 5: AUTOMATED AUDIT COMPLIANCE ---
 with tab5:
-    st.markdown("### 📜 SQLite History & Automated Audit Rule Checker")
+    st.markdown("### 🔍 Automated Compliance & Audit Rule Checker")
+    audit_file = st.file_uploader("Upload PC-1 / Feasibility PDF for Audit Rules Check", type=["pdf"], key="audit_pdf")
     
-    sub_tab_hist, sub_tab_audit = st.tabs(["📂 Saved Reports History", "🔍 AI Audit & Compliance Check"])
-    
-    with sub_tab_hist:
-        st.markdown("#### Database History (Generated Reports Log)")
-        df_history = get_all_reports()
-        if not df_history.empty:
-            st.dataframe(df_history[["id", "title", "task_type", "timestamp"]], use_container_width=True)
-            
-            selected_id = st.selectbox("Select Report ID to View Full Content:", df_history["id"].tolist())
-            if selected_id:
-                row_data = df_history[df_history["id"] == selected_id].iloc[0]
-                st.markdown(f"**Title:** {row_data['title']}")
-                st.markdown(f"**Task Type:** {row_data['task_type']}")
-                st.markdown(f"**Timestamp:** {row_data['timestamp']}")
-                st.text_area("Report Content Preview:", row_data['content'], height=250)
-        else:
-            st.info("Koi history database mein mojood nahi hai. Pehle koi report generate karein.")
-            
-    with sub_tab_audit:
-        st.markdown("#### Automated Compliance & Audit Rule Checker")
-        audit_file = st.file_uploader("Upload PC-1 / Feasibility PDF for Audit Rules Check", type=["pdf"], key="audit_pdf")
-        
-        if audit_file is not None:
-            if st.button("🔍 Run KP Planning & Audit Compliance Check", type="primary"):
-                if not api_key:
-                    st.error("⚠️ Please provide your OpenRouter API Key!")
-                else:
-                    with st.spinner("Auditing document against KP Government Planning Manual rules..."):
-                        audit_text = extract_text_from_pdf(audit_file)[:30000]
-                        client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
-                        
-                        audit_prompt = f"""
+    if audit_file is not None:
+        if st.button("🔍 Run KP Planning & Audit Compliance Check", type="primary"):
+            if not api_key:
+                st.error("⚠️ Please provide your OpenRouter API Key!")
+            else:
+                with st.spinner("Auditing document against KP Government Planning Manual rules..."):
+                    audit_text = extract_text_from_pdf(audit_file)[:30000]
+                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+                    
+                    audit_prompt = f"""
 Act as a Senior Audit Officer and Planning Inspector for the Government of Khyber Pakhtunkhwa.
 Audit the following PC-1/Feasibility document against standard provincial financial rules, development guidelines, and planning norms.
 Check and report on:
@@ -469,20 +407,18 @@ Check and report on:
 Document Context:
 {audit_text}
 """
-                        audit_completion = client.chat.completions.create(
-                            model=model_name,
-                            messages=[
-                                {"role": "system", "content": "You are a strict and expert Government Audit & Compliance Inspector."},
-                                {"role": "user", "content": audit_prompt}
-                            ],
-                            max_tokens=3000,
-                            temperature=0.1
-                        )
-                        
-                        audit_result = audit_completion.choices[0].message.content
-                        st.markdown("### 📊 Audit & Compliance Report")
-                        st.markdown(audit_result)
-                        
-                        save_report_to_db(audit_file.name, "Audit Compliance Check", audit_result)
-        else:
-            st.info("👆 Audit check ke liye upar PDF upload karein.")
+                    audit_completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are a strict and expert Government Audit & Compliance Inspector."},
+                            {"role": "user", "content": audit_prompt}
+                        ],
+                        max_tokens=3000,
+                        temperature=0.1
+                    )
+                    
+                    audit_result = audit_completion.choices[0].message.content
+                    st.markdown("### 📊 Audit & Compliance Report")
+                    st.markdown(audit_result)
+    else:
+        st.info("👆 Audit check ke liye upar PDF upload karein.")
