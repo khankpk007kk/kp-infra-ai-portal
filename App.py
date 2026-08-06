@@ -11,8 +11,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Page Configuration
 st.set_page_config(
-    page_title="KP Secretariat - PDF Intelligence & Issue Finder Portal",
-    page_icon="📑",
+    page_title="KP Secretariat - PC-1 & PDF Intelligence Portal",
+    page_icon="🏛️",
     layout="wide"
 )
 
@@ -49,21 +49,21 @@ model_name = st.sidebar.selectbox(
 )
 
 # App Header
-st.markdown('<p class="main-header">📑 KP Secretariat - Massive PDF Analysis & Hidden Issue Finder Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced OCR, Deep-PDF Document Intelligence, Hidden Loophole Detector & Official Report Generator</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">🏛️ KP Secretariat - PC-1 & Massive PDF Desk Review Portal</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Financial Summary Extractor, Geographic Map Mapper, Hidden Issue Scanner & Official Draft Generator</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# Navigation Tabs focused purely on Document Intelligence & PDF Analysis
+# Navigation Tabs (6 Comprehensive Tabs)
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "🔍 Hidden Issues & Red-Flag Scanner", 
-    "💬 Deep Chat with Massive PDF", 
-    "⚖️ Multi-Doc PC-1 Comparison",
-    "📝 Official Reply & Draft Generator",
-    "📊 Financial & Table Data Extractor",
-    "🗺️ Project Location & Map Mapper"
+    "📊 Financial Summary & Cost Breakdown", 
+    "🗺️ Geographic & Map Mapper", 
+    "🔍 Red-Flag & Hidden Issue Scanner",
+    "💬 Deep Chat with Massive PDF",
+    "⚖️ PC-1 Comparative Analysis",
+    "📝 Official Reply & Draft Generator"
 ])
 
-# Helper Function for OCR / Text Extraction from Large PDFs
+# Helper Function for OCR / Text Extraction from Large PDFs with Page Tracking
 def extract_text_from_pdf(uploaded_file):
     reader = pypdf.PdfReader(uploaded_file)
     text = ""
@@ -91,8 +91,93 @@ KP_DISTRICTS_DB = {
     "Haripur": [33.9994, 72.9342]
 }
 
-# --- TAB 1: HIDDEN ISSUES & RED-FLAG SCANNER ---
+# --- TAB 1: FINANCIAL SUMMARY & COST BREAKDOWN ---
 with tab1:
+    st.markdown("### 📊 PC-1 Financial Summary & Cost Extraction")
+    st.markdown("Upload a PC-1 or project document to automatically extract capital costs, recurring costs, foreign exchange components, and financial summaries.")
+    
+    fin_file = st.file_uploader("Upload PC-1 PDF for Financial Extraction", type=["pdf"], key="fin_pdf")
+    
+    if fin_file is not None:
+        if st.button("📊 Extract Financial Tables & Summary", type="primary"):
+            if not api_key:
+                st.error("⚠️ Please provide your OpenRouter API Key!")
+            else:
+                with st.spinner("Extracting financial schedules and cost estimates..."):
+                    fin_text = extract_text_from_pdf(fin_file)
+                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+                    
+                    fin_prompt = f"""
+Act as a Senior Financial Analyst in KP Planning & Development Department.
+Extract all financial summaries, cost breakdowns, capital expenditures, and budget allocations from the following PC-1/document text. 
+Present the findings clearly in Markdown tables and highlight total project cost, foreign exchange components (if any), and year-wise phasing.
+
+Document Text:
+{fin_text[:40000]}
+"""
+                    fin_completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are a precise financial and budget analyst for government projects."},
+                            {"role": "user", "content": fin_prompt}
+                        ],
+                        max_tokens=3000,
+                        temperature=0.1
+                    )
+                    st.markdown("### 📋 Extracted Financial Summary & Cost Analysis")
+                    st.markdown(fin_completion.choices[0].message.content)
+    else:
+        st.info("👆 Financial summary extract karne ke liye PC-1 PDF upload karein.")
+
+# --- TAB 2: GEOGRAPHIC & MAP MAPPER ---
+with tab2:
+    st.markdown("### 🗺️ ADP Project Location & Geographic Map Mapper")
+    st.markdown("PC-1 ke andar diye gaye district names aur project zones ko automatically detect kar ke interactive map par plot karein.")
+    
+    map_file = st.file_uploader("Upload PC-1 / ADP PDF for Geographic Mapping", type=["pdf"], key="map_pdf")
+    
+    if map_file is not None:
+        base_name_m = map_file.name.rsplit('.', 1)[0]
+        with st.spinner("Scanning document for geographic locations and districts..."):
+            map_text = extract_text_from_pdf(map_file)
+            
+            detected_districts = []
+            for district in KP_DISTRICTS_DB.keys():
+                if district.lower() in map_text.lower():
+                    detected_districts.append(district)
+            
+            if not detected_districts:
+                detected_districts = ["Peshawar", "Mardan", "Swat"]
+            
+            st.markdown(f"#### 📍 Detected Districts in Document: {', '.join(detected_districts)}")
+            center_coords = KP_DISTRICTS_DB.get(detected_districts[0], [34.0151, 71.5249])
+            m = folium.Map(location=center_coords, zoom_start=8)
+            
+            for dist in detected_districts:
+                coords = KP_DISTRICTS_DB[dist]
+                folium.Marker(
+                    coords, 
+                    popup=f"Project Site Zone: {dist}", 
+                    tooltip=f"{dist} District",
+                    icon=folium.Icon(color="red", icon="info-sign")
+                ).add_to(m)
+            
+            st_folium(m, width=700, height=400)
+            
+            map_file_path = f"{base_name_m}_Project_Map.html"
+            m.save(map_file_path)
+            with open(map_file_path, "rb") as map_file_dl:
+                st.download_button(
+                    label="📥 Download Interactive Map (.html)",
+                    data=map_file_dl,
+                    file_name=f"{base_name_m}_Map.html",
+                    mime="text/html"
+                )
+    else:
+        st.info("👆 Geographic mapping ke liye PDF upload karein.")
+
+# --- TAB 3: RED-FLAG & HIDDEN ISSUE SCANNER ---
+with tab3:
     st.markdown("### 🔍 Scan Massive PDFs for Hidden Loopholes, Contradictions & Red Flags")
     st.markdown("Upload any bulky PC-1, policy document, or audit file to automatically highlight hidden errors, financial mismatches, or policy violations across pages.")
     
@@ -138,8 +223,8 @@ Document Text:
                 except Exception as e:
                     st.error(f"❌ Scan Error: {str(e)}")
 
-# --- TAB 2: DEEP CHAT WITH MASSIVE PDF ---
-with tab2:
+# --- TAB 4: DEEP CHAT WITH MASSIVE PDF ---
+with tab4:
     st.markdown("### 💬 Deep Chat / RAG with Massive PDFs")
     st.markdown("Aap apni lambi PDF upload kar ke kisi bhi page par chupay huway specific point ya clause ke baray mein direct sawal pooch sakte hain.")
     
@@ -149,7 +234,7 @@ with tab2:
         with st.spinner("Indexing document pages for smart chat..."):
             chat_pdf_text = extract_text_from_pdf(chat_file)
             
-        user_question = st.text_area("Aap is document mein kya talaash kar rahe hain?", placeholder="Misal: Page 45 par cost breakdown kya di gayi hai? Ya is project mein land acquisition ka kya clause hai?")
+        user_question = st.text_input("Aap is document mein kya talaash kar rahe hain?", placeholder="Misal: Page 45 par cost breakdown kya di gayi hai? Ya is project mein land acquisition ka kya clause hai?")
         
         if st.button("🔍 Search & Answer from PDF", type="primary"):
             if not api_key:
@@ -173,8 +258,8 @@ with tab2:
     else:
         st.info("👆 Pehle upar PDF upload karein.")
 
-# --- TAB 3: MULTI-DOC PC-1 COMPARISON ---
-with tab3:
+# --- TAB 5: PC-1 COMPARATIVE ANALYSIS ---
+with tab5:
     st.markdown("### ⚖️ Compare Two Documents (Original vs Revised PC-1 / Policy)")
     
     col_orig, col_rev = st.columns(2)
@@ -239,8 +324,8 @@ File 2 Extract:
                 except Exception as e:
                     st.error(f"❌ Comparison Error: {str(e)}")
 
-# --- TAB 4: OFFICIAL REPLY & DRAFT GENERATOR ---
-with tab4:
+# --- TAB 6: OFFICIAL REPLY & DRAFT GENERATOR ---
+with tab6:
     st.markdown("### 📝 Generate Official Reply or P&D Observation Response (.docx)")
     
     rep_file = st.file_uploader("Upload Observation Letter / PC-1 PDF", type=["pdf"], key="rep_pdf")
@@ -316,84 +401,3 @@ with tab4:
                         )
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
-
-# --- TAB 5: FINANCIAL & TABLE DATA EXTRACTOR ---
-with tab5:
-    st.markdown("### 📊 Extract Financial Tables & Data from PDF")
-    st.markdown("Upload a document containing financial tables, cost estimates, or allocations to summarize and extract them into clean tabular formats.")
-    
-    table_file = st.file_uploader("Upload PDF with Financial Data / Tables", type=["pdf"], key="table_pdf")
-    
-    if table_file is not None:
-        if st.button("📊 Extract & Summarize Financial Tables", type="primary"):
-            if not api_key:
-                st.error("⚠️ Please provide your OpenRouter API Key!")
-            else:
-                with st.spinner("Extracting financial details and figures..."):
-                    t_text = extract_text_from_pdf(table_file)
-                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
-                    
-                    t_prompt = f"""
-Extract all financial tables, cost breakdowns, budget allocations, and numerical figures from the following document text. Present them clearly using Markdown tables.
-
-Document Text:
-{t_text[:35000]}
-"""
-                    t_completion = client.chat.completions.create(
-                        model=model_name,
-                        messages=[
-                            {"role": "system", "content": "You are a data extraction expert specializing in government financial documents."},
-                            {"role": "user", "content": t_prompt}
-                        ],
-                        max_tokens=3000,
-                        temperature=0.1
-                    )
-                    st.markdown("### 📋 Extracted Financial Summary")
-                    st.markdown(t_completion.choices[0].message.content)
-    else:
-        st.info("👆 Table extraction ke liye PDF upload karein.")
-
-# --- TAB 6: PROJECT LOCATION & MAP MAPPER ---
-with tab6:
-    st.markdown("### 🗺️ Auto-Detect Project Locations & Map Generator")
-    map_file = st.file_uploader("Upload PC-1 / Project Document to locate zones", type=["pdf"], key="map_pdf")
-    
-    if map_file is not None:
-        base_name_m = map_file.name.rsplit('.', 1)[0]
-        with st.spinner("Scanning document for district names and mapping..."):
-            map_text = extract_text_from_pdf(map_file)
-            
-            detected_districts = []
-            for district in KP_DISTRICTS_DB.keys():
-                if district.lower() in map_text.lower():
-                    detected_districts.append(district)
-            
-            if not detected_districts:
-                detected_districts = ["Peshawar", "Mardan", "Swat"]
-            
-            st.markdown(f"#### 📍 Detected Districts in Document: {', '.join(detected_districts)}")
-            center_coords = KP_DISTRICTS_DB.get(detected_districts[0], [34.0151, 71.5249])
-            m = folium.Map(location=center_coords, zoom_start=8)
-            
-            for dist in detected_districts:
-                coords = KP_DISTRICTS_DB[dist]
-                folium.Marker(
-                    coords, 
-                    popup=f"Project Zone: {dist}", 
-                    tooltip=f"{dist} District",
-                    icon=folium.Icon(color="red", icon="info-sign")
-                ).add_to(m)
-            
-            st_folium(m, width=700, height=400)
-            
-            map_file_path = f"{base_name_m}_Project_Map.html"
-            m.save(map_file_path)
-            with open(map_file_path, "rb") as map_file_dl:
-                st.download_button(
-                    label="📥 Download Interactive Map (.html)",
-                    data=map_file_dl,
-                    file_name=f"{base_name_m}_Map.html",
-                    mime="text/html"
-                )
-    else:
-        st.info("👆 Map generate karne ke liye PDF upload karein.")
