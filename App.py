@@ -470,16 +470,15 @@ with tab7:
         total_cost_m = st.number_input("Total Project Cost (Million PKR):", value=500.0)
         
     if st.button("📊 Generate S-Curve & Progress Projections", type="primary"):
-        months = [f"Month {i}" for i in range(1, project_duration_months + 1)]
-        # Cumulative S-curve mathematical simulation (Sigmoidal curve approximation)
         import math
+        months = [f"Month {i}" for i in range(1, project_duration_months + 1)]
         planned_financial = [(total_cost_m / (1 + math.exp(-0.4 * (i - project_duration_months/2)))) for i in range(1, project_duration_months + 1)]
-        actual_physical = [(p * 0.92) for p in planned_financial] # Simulated slight lag
+        actual_physical = [(p * 0.92) for p in planned_financial] 
         
         df_scurve = pd.DataFrame({
             "Month": months,
             "Planned Financial (M PKR)": planned_financial,
-            "Estimated Physical Progress (%)": [min(100, (val/total_cost_m)*100) for val in actual_financial]
+            "Estimated Physical Progress (%)": [min(100, (val/total_cost_m)*100) for val in actual_physical]
         })
         
         st.dataframe(df_scurve, use_container_width=True)
@@ -495,7 +494,6 @@ with tab8:
     concrete_volume = st.number_input("Enter Total Wet Volume of Concrete (Cubic Meters - m³):", value=50.0)
     
     if st.button("🧮 Compute Material Quantities", type="primary"):
-        # Dry volume factor = Wet volume * 1.54
         dry_vol = concrete_volume * 1.54
         
         if "M15" in concrete_grade:
@@ -507,12 +505,11 @@ with tab8:
         else:
             c, s, a = 1, 4, 8
             
-sum_parts = c + s + a
-c_vol = (c / sum_parts) * dry_vol
-s_vol = (s / sum_parts) * dry_vol
-a_vol = (a / sum_parts) * dry_vol
+        sum_parts = c + s + a
+        c_vol = (c / sum_parts) * dry_vol
+        s_vol = (s / sum_parts) * dry_vol
+        a_vol = (a / sum_parts) * dry_vol
 
-        # 1 bag cement = 0.0347 cubic meters (or 50 kg)
         cement_bags = c_vol / 0.0347
         sand_cuft = s_vol * 35.3147
         agg_cuft = a_vol * 35.3147
