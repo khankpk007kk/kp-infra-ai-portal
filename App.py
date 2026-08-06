@@ -11,8 +11,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Page Configuration
 st.set_page_config(
-    page_title="KP Infra AI Portal - Enterprise Edition",
-    page_icon="🏛️",
+    page_title="KP Infra & Civil Engineering AI Portal",
+    page_icon="🏗️",
     layout="wide"
 )
 
@@ -49,17 +49,21 @@ model_name = st.sidebar.selectbox(
 )
 
 # App Header
-st.markdown('<p class="main-header">🏛️ KP Secretariat - Infrastructure Section AI Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, OCR, Audit Compliance & Dynamic Mapping</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">🏗️ KP Secretariat - Civil Engineering & Infrastructure AI Portal</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Advanced PC-1 Analysis, SMR/BOQ Checker, S-Curve Monitoring, Material Estimator & Compliance Audit</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# Navigation Tabs (5 Tabs)
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+# Navigation Tabs (9 Tabs for complete functionality)
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "📊 Dashboard & Map", 
     "📝 Official Report", 
     "⚖️ Comparison",
     "💬 Chat with PDF",
-    "🔍 AI Audit Compliance"
+    "🔍 Audit Compliance",
+    "📋 BOQ & SMR Checker",
+    "📈 S-Curve & Progress",
+    "🧱 Material Estimator",
+    "📐 AASHTO & Code Check"
 ])
 
 # Helper Function for OCR / Text Extraction
@@ -191,11 +195,7 @@ with tab2:
             with st.spinner("Processing document with OCR and generating official drafts..."):
                 try:
                     pdf_text = extract_text_from_pdf(uploaded_file_t2)
-                    
-                    client = OpenAI(
-                        base_url="https://openrouter.ai/api/v1",
-                        api_key=api_key,
-                    )
+                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
                     
                     system_prompt = (
                         "You are an expert Chief Engineer, Planning Officer, and Infrastructure Specialist "
@@ -302,11 +302,7 @@ with tab3:
                     text_orig = extract_text_from_pdf(file_original)[:20000]
                     text_rev = extract_text_from_pdf(file_revised)[:20000]
                     
-                    client = OpenAI(
-                        base_url="https://openrouter.ai/api/v1",
-                        api_key=api_key,
-                    )
-                    
+                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
                     comparison_prompt = f"""
 Compare the following two documents ({comp_type}):
 1. Budget & Cost Allocations Variations
@@ -379,7 +375,7 @@ with tab4:
                     st.markdown("### 🤖 AI Answer:")
                     st.markdown(chat_completion.choices[0].message.content)
     else:
-        st.info("👆 Pehle upar file upload karein taake aap AI se uske baray mein sawal pooch saken.")
+        st.info("👆 Pehle upar file upload karein taake AI se uske baray mein sawal pooch saken.")
 
 # --- TAB 5: AUTOMATED AUDIT COMPLIANCE ---
 with tab5:
@@ -422,3 +418,146 @@ Document Context:
                     st.markdown(audit_result)
     else:
         st.info("👆 Audit check ke liye upar PDF upload karein.")
+
+# --- TAB 6: SCHEDULE OF RATES (SMR) & BOQ CHECKER ---
+with tab6:
+    st.markdown("### 📋 Schedule of Rates (SMR) & BOQ Automated Checker")
+    boq_file = st.file_uploader("Upload Contractor BOQ or Cost Estimate PDF", type=["pdf"], key="boq_pdf")
+    
+    if boq_file is not None:
+        if st.button("🔍 Verify BOQ Rates against KP SMR Standards", type="primary"):
+            if not api_key:
+                st.error("⚠️ Please provide your OpenRouter API Key!")
+            else:
+                with st.spinner("Analyzing BOQ item rates against KP Schedule of Rates..."):
+                    boq_text = extract_text_from_pdf(boq_file)[:30000]
+                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+                    
+                    boq_prompt = f"""
+Act as an expert Chief Estimation & Cost Engineer for KP Government. 
+Analyze the following Bill of Quantities (BOQ) or cost estimate document. 
+Check items against standard KP Schedule of Rates (SMR) norms:
+1. Identify items where rates are abnormally high or low compared to market/SMR standards.
+2. Verify total cost calculations and unit rates.
+3. Highlight budgetary anomalies or inflated items.
+
+Document Context:
+{boq_text}
+"""
+                    boq_completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are a precise Senior Cost Estimation Engineer."},
+                            {"role": "user", "content": boq_prompt}
+                        ],
+                        max_tokens=3000,
+                        temperature=0.1
+                    )
+                    st.markdown("### 📊 SMR & BOQ Audit Report")
+                    st.markdown(boq_completion.choices[0].message.content)
+    else:
+        st.info("👆 BOQ verification ke liye contractor estimation PDF upload karein.")
+
+# --- TAB 7: S-CURVE & PHYSICAL VS FINANCIAL PROGRESS MONITORING ---
+with tab7:
+    st.markdown("### 📈 S-Curve & Progress Tracking Dashboard")
+    st.markdown("Project ki physical progress aur financial disbursement ka comparison analyze karein.")
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        project_duration_months = st.slider("Project Duration (Months):", 6, 36, 12)
+    with col_p2:
+        total_cost_m = st.number_input("Total Project Cost (Million PKR):", value=500.0)
+        
+    if st.button("📊 Generate S-Curve & Progress Projections", type="primary"):
+        months = [f"Month {i}" for i in range(1, project_duration_months + 1)]
+        # Cumulative S-curve mathematical simulation (Sigmoidal curve approximation)
+        import math
+        planned_financial = [(total_cost_m / (1 + math.exp(-0.4 * (i - project_duration_months/2)))) for i in range(1, project_duration_months + 1)]
+        actual_physical = [(p * 0.92) for p in planned_financial] # Simulated slight lag
+        
+        df_scurve = pd.DataFrame({
+            "Month": months,
+            "Planned Financial (M PKR)": planned_financial,
+            "Estimated Physical Progress (%)": [min(100, (val/total_cost_m)*100) for val in actual_financial]
+        })
+        
+        st.dataframe(df_scurve, use_container_width=True)
+        st.markdown("#### 📉 Visual S-Curve Trend")
+        st.line_chart(df_scurve.set_index("Month"))
+        st.success("✅ S-Curve successfully projected. Use this to track fund disbursement vs site output.")
+
+# --- TAB 8: MATERIAL QUANTITY ESTIMATION & RATIO VERIFICATION ---
+with tab8:
+    st.markdown("### 🧱 Material Quantity Estimation & Concrete Mix Ratio Verification")
+    
+    concrete_grade = st.selectbox("Select Concrete Mix Ratio / Grade:", ["M15 (1:2:4)", "M20 (1:1.5:3)", "M25 (1:1:2)", "Plain Cement Concrete (PCC 1:4:8)"])
+    concrete_volume = st.number_input("Enter Total Wet Volume of Concrete (Cubic Meters - m³):", value=50.0)
+    
+    if st.button("🧮 Compute Material Quantities", type="primary"):
+        # Dry volume factor = Wet volume * 1.54
+        dry_vol = concrete_volume * 1.54
+        
+        if "M15" in concrete_grade:
+            c, s, a = 1, 2, 4
+        elif "M20" in concrete_grade:
+            c, s, a = 1, 1.5, 3
+        elif "M25" in concrete_grade:
+            c, s, a = 1, 1, 2
+        else:
+            c, s, a = 1, 4, 8
+            
+sum_parts = c + s + a
+c_vol = (c / sum_parts) * dry_vol
+s_vol = (s / sum_parts) * dry_vol
+a_vol = (a / sum_parts) * dry_vol
+
+        # 1 bag cement = 0.0347 cubic meters (or 50 kg)
+        cement_bags = c_vol / 0.0347
+        sand_cuft = s_vol * 35.3147
+        agg_cuft = a_vol * 35.3147
+        
+        st.markdown(f"#### 📊 Material Breakdown for {concrete_volume} m³ of {concrete_grade}")
+        mat_df = pd.DataFrame({
+            "Material Required": ["Cement (50kg Bags)", "Sand (Cubic Feet - cu.ft)", "Crush / Aggregate (Cubic Feet - cu.ft)"],
+            "Estimated Quantity": [round(cement_bags, 2), round(sand_cuft, 2), round(agg_cuft, 2)]
+        })
+        st.dataframe(mat_df, use_container_width=True)
+        st.info("💡 Note: Steel (Rebar) estimation is typically calculated as 1% to 2% of total concrete volume weight for standard RCC structures.")
+
+# --- TAB 9: AASHTO & PAKISTAN BUILDING CODE COMPLIANCE ---
+with tab9:
+    st.markdown("### 📐 AASHTO & Pakistan Building Code (PBC) Compliance Audit")
+    code_file = st.file_uploader("Upload Structural / Road Design PC-1 PDF", type=["pdf"], key="code_pdf")
+    
+    if code_file is not None:
+        if st.button("🔍 Audit Design against AASHTO & PBC Guidelines", type="primary"):
+            if not api_key:
+                st.error("⚠️ Please provide your OpenRouter API Key!")
+            else:
+                with st.spinner("Auditing specifications against AASHTO and Pakistan Building Code standards..."):
+                    code_text = extract_text_from_pdf(code_file)[:30000]
+                    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+                    
+                    code_prompt = f"""
+Act as a Senior Structural and Highway Design Expert. Audit the following project document against:
+1. AASHTO Specifications (for roads, bridges, pavements, and drainage geometry).
+2. Pakistan Building Code (PBC) / Seismic Zone compliance for KP region.
+3. Identify technical design violations, safety factor concerns, or missing engineering parameters.
+
+Document Context:
+{code_text}
+"""
+                    code_completion = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are a professional Highway and Structural Compliance Auditor."},
+                            {"role": "user", "content": code_prompt}
+                        ],
+                        max_tokens=3000,
+                        temperature=0.1
+                    )
+                    st.markdown("### 📊 Engineering Standards Compliance Report")
+                    st.markdown(code_completion.choices[0].message.content)
+    else:
+        st.info("👆 Technical compliance audit ke liye design report PDF upload karein.")
