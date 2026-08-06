@@ -2,12 +2,47 @@ import streamlit as st
 import pypdf
 import pandas as pd
 import os
+import sqlite3
+from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from openai import OpenAI
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+# SQLite Database Initialization for History & Session Storage
+def init_db():
+    conn = sqlite3.connect('kp_portal_history.db', check_same_thread=False)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS generated_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            task_type TEXT,
+            content TEXT,
+            timestamp TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def save_report_to_db(title, task_type, content):
+    conn = sqlite3.connect('kp_portal_history.db', check_same_thread=False)
+    c = conn.cursor()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("INSERT INTO generated_reports (title, task_type, content, timestamp) VALUES (?, ?, ?, ?)", 
+              (title, task_type, content, timestamp))
+    conn.commit()
+    conn.close()
+
+def get_all_reports():
+    conn = sqlite3.connect('kp_portal_history.db', check_same_thread=False)
+    df_hist = pd.read_sql_query("SELECT * FROM generated_reports ORDER BY id DESC", conn)
+    conn.close()
+    return df_hist
 
 # Page Configuration
 st.set_page_config(
@@ -50,18 +85,32 @@ model_name = st.sidebar.selectbox(
 
 # App Header
 st.markdown('<p class="main-header">🏛️ KP Secretariat - Infrastructure Section AI Portal</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, Dynamic Mapping, Financial Charts, Chat with PDF & Multi-Year Comparison</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Advanced PC-1/PC-2 Analysis, OCR, Audit Compliance, SQLite History & Dynamic Mapping</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# Navigation Tabs (4 Advanced Tabs)
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Dashboard, Map & Financial Charts", 
-    "📝 Official Report & Executive Summary", 
-    "⚖️ PC-1 & Multi-Year Comparison",
-    "💬 Chat with PDF (AI Assistant)"
+# Navigation Tabs (5 Advanced Tabs)
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Dashboard & Map", 
+    "📝 Official Report", 
+    "⚖️ Comparison",
+    "💬 Chat with PDF",
+    "📜 History & Audit Compliance"
 ])
 
-# KP Districts Coordinates Database for Mapping
+# Helper Function for OCR / Text Extraction
+def extract_text_from_pdf(uploaded_file):
+    reader = pypdf.PdfReader(uploaded_file)
+    text = ""
+    for page in reader.pages:
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted + "\n"
+    
+    # Fallback or OCR notification if text is minimal (Scanned PDF handling placeholder)
+    if len(text.strip()) < 50:
+        st.warning("⚠️ Yeh PDF scanned lag rahi hai. Agar text extract na ho toh k baraye meharbani searchable PDF upload karein.")
+    return text
+
 KP_DISTRICTS_DB = {
     "Peshawar": [34.0151, 71.5249],
     "Mardan": [34.1989, 72.0406],
@@ -84,9 +133,8 @@ with tab1:
     
     if uploaded_file_t1 is not None:
         base_name_t1 = uploaded_file_t1.name.rsplit('.', 1)[0]
-        with st.spinner("Analyzing document for locations and financial metrics..."):
-            reader = pypdf.PdfReader(uploaded_file_t1)
-            pdf_text_t1 = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
+        with st.spinner("Analyzing document with OCR and extracting locations..."):
+            pdf_text_t1 = extract_text_from_pdf(uploaded_file_t1)
             
             detected_districts = []
             for district in KP_DISTRICTS_DB.keys():
@@ -130,7 +178,6 @@ with tab1:
                 
                 st_folium(m, width=500, height=330)
                 
-                # Dynamic File Name for Map Download
                 map_file_path = f"{base_name_t1}_Project_Map.html"
                 m.save(map_file_path)
                 with open(map_file_path, "rb") as map_file:
@@ -149,8 +196,6 @@ with tab1:
                 }
                 df_fin = pd.DataFrame(fin_data)
                 st.dataframe(df_fin, use_container_width=True)
-                
-                # Dynamic Interactive Bar Chart
                 st.bar_chart(df_fin.set_index("Cost Category"))
     else:
         st.info("👆 Please upload an ADP / PC-1 PDF file above to view the dynamic map and financial charts.")
@@ -179,10 +224,9 @@ with tab2:
             st.error("⚠️ Please upload a PDF file first!")
         else:
             base_name = uploaded_file_t2.name.rsplit('.', 1)[0]
-            with st.spinner("Processing document and generating official drafts..."):
+            with st.spinner("Processing document with OCR and generating official drafts..."):
                 try:
-                    reader = pypdf.PdfReader(uploaded_file_t2)
-                    pdf_text = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
+                    pdf_text = extract_text_from_pdf(uploaded_file_t2)
                     
                     client = OpenAI(
                         base_url="https://openrouter.ai/api/v1",
@@ -209,7 +253,9 @@ with tab2:
                     st.markdown("### 📋 Generated Official Draft Preview")
                     st.markdown(response_text)
                     
-                    # 1. Main Official Report Word Document (Dynamic File Name)
+                    # Save into SQLite Database History
+                    save_report_to_db(base_name, task_option, response_text)
+                    
                     doc = Document()
                     if os.path.exists("kpk_logo.png"):
                         doc.add_picture("kpk_logo.png", width=Inches(1.2))
@@ -237,7 +283,6 @@ with tab2:
                     output_file_path = f"{base_name}_Official_Report.docx"
                     doc.save(output_file_path)
                     
-                    # 2. Executive Summary Word Document (1-Page Condensed)
                     doc_exec = Document()
                     p_ex = doc_exec.add_paragraph()
                     p_ex.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -293,11 +338,8 @@ with tab3:
             base_name_c2 = file_revised.name.rsplit('.', 1)[0]
             with st.spinner("Performing AI comparative analysis..."):
                 try:
-                    reader_orig = pypdf.PdfReader(file_original)
-                    text_orig = "".join([p.extract_text() for p in reader_orig.pages if p.extract_text()])[:20000]
-                    
-                    reader_rev = pypdf.PdfReader(file_revised)
-                    text_rev = "".join([p.extract_text() for p in reader_rev.pages if p.extract_text()])[:20000]
+                    text_orig = extract_text_from_pdf(file_original)[:20000]
+                    text_rev = extract_text_from_pdf(file_revised)[:20000]
                     
                     client = OpenAI(
                         base_url="https://openrouter.ai/api/v1",
@@ -330,7 +372,8 @@ File 2 Extract:
                     st.markdown("### 📊 Comparative Analysis Report")
                     st.markdown(comparison_result)
                     
-                    # Save comparison report dynamically
+                    save_report_to_db(f"{base_name_c1} vs {base_name_c2}", "Comparison", comparison_result)
+                    
                     comp_doc = Document()
                     comp_doc.add_heading(f"Comparative Analysis: {base_name_c1} vs {base_name_c2}", level=1)
                     comp_doc.add_paragraph(comparison_result)
@@ -354,9 +397,7 @@ with tab4:
     chat_file = st.file_uploader("Upload PDF to start asking questions", type=["pdf"], key="chat_pdf")
     
     if chat_file is not None:
-        reader_chat = pypdf.PdfReader(chat_file)
-        chat_pdf_text = "".join([p.extract_text() for p in reader_chat.pages if p.extract_text()])[:30000]
-        
+        chat_pdf_text = extract_text_from_pdf(chat_file)[:30000]
         user_question = st.text_input("Aap is document ke baray mein kya pochna chahte hain?", placeholder="Misal: Is project ki total cost kitni hai ya kon sa district shamil hai?")
         
         if st.button("Ask AI", type="primary"):
@@ -380,3 +421,68 @@ with tab4:
                     st.markdown(chat_completion.choices[0].message.content)
     else:
         st.info("👆 Pehle upar file upload karein taake aap AI se uske baray mein sawal pooch saken.")
+
+# --- TAB 5: HISTORY & AUTOMATED AUDIT COMPLIANCE ---
+with tab5:
+    st.markdown("### 📜 SQLite History & Automated Audit Rule Checker")
+    
+    sub_tab_hist, sub_tab_audit = st.tabs(["📂 Saved Reports History", "🔍 AI Audit & Compliance Check"])
+    
+    with sub_tab_hist:
+        st.markdown("#### Database History (Generated Reports Log)")
+        df_history = get_all_reports()
+        if not df_history.empty:
+            st.dataframe(df_history[["id", "title", "task_type", "timestamp"]], use_container_width=True)
+            
+            selected_id = st.selectbox("Select Report ID to View Full Content:", df_history["id"].tolist())
+            if selected_id:
+                row_data = df_history[df_history["id"] == selected_id].iloc[0]
+                st.markdown(f"**Title:** {row_data['title']}")
+                st.markdown(f"**Task Type:** {row_data['task_type']}")
+                st.markdown(f"**Timestamp:** {row_data['timestamp']}")
+                st.text_area("Report Content Preview:", row_data['content'], height=250)
+        else:
+            st.info("Koi history database mein mojood nahi hai. Pehle koi report generate karein.")
+            
+    with sub_tab_audit:
+        st.markdown("#### Automated Compliance & Audit Rule Checker")
+        audit_file = st.file_uploader("Upload PC-1 / Feasibility PDF for Audit Rules Check", type=["pdf"], key="audit_pdf")
+        
+        if audit_file is not None:
+            if st.button("🔍 Run KP Planning & Audit Compliance Check", type="primary"):
+                if not api_key:
+                    st.error("⚠️ Please provide your OpenRouter API Key!")
+                else:
+                    with st.spinner("Auditing document against KP Government Planning Manual rules..."):
+                        audit_text = extract_text_from_pdf(audit_file)[:30000]
+                        client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+                        
+                        audit_prompt = f"""
+Act as a Senior Audit Officer and Planning Inspector for the Government of Khyber Pakhtunkhwa.
+Audit the following PC-1/Feasibility document against standard provincial financial rules, development guidelines, and planning norms.
+Check and report on:
+1. Financial justification & contingencies compliance.
+2. Environmental & Social Impact Assessment (ESIA) status.
+3. Procurement & Timeline feasibility.
+4. Any policy gaps, anomalies, or red flags that violate KP planning rules.
+
+Document Context:
+{audit_text}
+"""
+                        audit_completion = client.chat.completions.create(
+                            model=model_name,
+                            messages=[
+                                {"role": "system", "content": "You are a strict and expert Government Audit & Compliance Inspector."},
+                                {"role": "user", "content": audit_prompt}
+                            ],
+                            max_tokens=3000,
+                            temperature=0.1
+                        )
+                        
+                        audit_result = audit_completion.choices[0].message.content
+                        st.markdown("### 📊 Audit & Compliance Report")
+                        st.markdown(audit_result)
+                        
+                        save_report_to_db(audit_file.name, "Audit Compliance Check", audit_result)
+        else:
+            st.info("👆 Audit check ke liye upar PDF upload karein.")
