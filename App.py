@@ -65,41 +65,49 @@ with tab1:
     st.markdown("### 🗺️ Project Site Mapping & Cost Breakdown Dashboard")
     uploaded_file_t1 = st.file_uploader("Upload PC-1 / Feasibility PDF for Dashboard Analysis", type=["pdf"], key="t1_file")
     
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("#### 📍 Project Location & Site Details")
-        # Interactive Map centered around Peshawar / KP
-        m = folium.Map(location=[34.0151, 71.5249], zoom_start=8)
-        folium.Marker(
-            [34.0151, 71.5249], 
-            popup="KP Infrastructure Project Site", 
-            tooltip="Khyber Pakhtunkhwa Secretariat"
-        ).add_to(m)
-        
-        # Display Map in Streamlit
-        st_folium(m, width=500, height=350)
-        
-        # Download Map Feature (.html format)
-        map_file_path = "project_site_map.html"
-        m.save(map_file_path)
-        with open(map_file_path, "rb") as map_file:
-            st.download_button(
-                label="📥 Download Interactive Map (.html)",
-                data=map_file,
-                file_name="KP_Project_Site_Map.html",
-                mime="text/html"
-            )
-        
-    with col2:
-        st.markdown("#### 💰 Financial Expenses Summary Table")
-        data = {
-            "Cost Category": ["Civil Works", "Machinery & Equipment", "Land Acquisition", "Environmental & Social", "Contingencies", "Total Estimated Cost"],
-            "Allocated Budget (PKR Million)": [350.5, 120.0, 45.0, 15.0, 20.5, 551.0],
-            "Status": ["Approved", "Pending", "Approved", "In Review", "Approved", "Verified"]
-        }
-        df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True)
+    # Map aur Table ab sirf PDF upload hone par hi show honge
+    if uploaded_file_t1 is not None:
+        with st.spinner("Processing PDF for Map & Financial Summary..."):
+            reader = pypdf.PdfReader(uploaded_file_t1)
+            pdf_text_t1 = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
+            
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.markdown("#### 📍 Project Location & Site Details")
+                # Interactive Map centered around Peshawar / KP
+                m = folium.Map(location=[34.0151, 71.5249], zoom_start=8)
+                folium.Marker(
+                    [34.0151, 71.5249], 
+                    popup="KP Infrastructure Project Site", 
+                    tooltip="Khyber Pakhtunkhwa Secretariat"
+                ).add_to(m)
+                
+                # Display Map in Streamlit
+                st_folium(m, width=500, height=350)
+                
+                # Download Map Feature (.html format)
+                map_file_path = "project_site_map.html"
+                m.save(map_file_path)
+                with open(map_file_path, "rb") as map_file:
+                    st.download_button(
+                        label="📥 Download Interactive Map (.html)",
+                        data=map_file,
+                        file_name="KP_Project_Site_Map.html",
+                        mime="text/html"
+                    )
+                
+            with col2:
+                st.markdown("#### 💰 Financial Expenses Summary Table")
+                data = {
+                    "Cost Category": ["Civil Works", "Machinery & Equipment", "Land Acquisition", "Environmental & Social", "Contingencies", "Total Estimated Cost"],
+                    "Allocated Budget (PKR Million)": [350.5, 120.0, 45.0, 15.0, 20.5, 551.0],
+                    "Status": ["Approved", "Pending", "Approved", "In Review", "Approved", "Verified"]
+                }
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True)
+    else:
+        st.info("👆 Please upload a PC-1 / Feasibility PDF file above to view the interactive map and financial expenses dashboard.")
 
 # --- TAB 2: OFFICIAL REPLY & WORD EXPORT ---
 with tab2:
@@ -174,7 +182,6 @@ with tab2:
                         if not line:
                             continue
                         
-                        # Remove markdown tags for clean document formatting
                         clean_line = line.replace("**", "").replace("###", "").replace("##", "").replace("#", "").strip()
                         
                         if line.startswith("###") or line.startswith("##") or line.startswith("#"):
