@@ -4,9 +4,12 @@ import folium
 from streamlit_folium import st_folium
 from openai import OpenAI
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-import io # Added for in-memory file generation
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+import io
+import re
 
 # Page Configuration
 st.set_page_config(
@@ -15,11 +18,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom Styling
+# Custom Styling - Liquid Navigation Bar & Modern UI
 st.markdown("""
     <style>
     .main-header {
-        font-size: 26px;
+        font-size: 28px;
         font-weight: bold;
         color: #1E3A8A;
         margin-bottom: 0px;
@@ -29,11 +32,65 @@ st.markdown("""
         font-size: 14px;
         margin-bottom: 20px;
     }
+    
+    /* Liquid/Glassmorphism Tab Navigation */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: linear-gradient(135deg, rgba(30, 58, 138, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+        padding: 8px;
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: white;
+        border-radius: 12px;
+        padding: 12px 20px;
+        color: #1E3A8A;
+        font-weight: 500;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background: linear-gradient(135deg, #3B82F6 0%, #1E3A8A 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(30, 58, 138, 0.3);
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%) !important;
+        color: white !important;
+        box-shadow: 0 8px 16px rgba(30, 58, 138, 0.4);
+    }
+    
     .stButton>button {
         width: 100%;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
+        color: white;
+        border: none;
+    }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(30, 58, 138, 0.4);
     }
     </style>
 """, unsafe_allow_html=True)
+
+# Logo Display at Top
+try:
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        st.image("kp_logo.png", width=150)
+except:
+    pass
 
 # Sidebar Configurations
 st.sidebar.header("⚙️ System Configurations")
@@ -55,7 +112,7 @@ st.markdown('<p class="main-header">🏛️ KP Secretariat - PC-1 & Massive PDF 
 st.markdown('<p class="sub-header">Financial Summary Extractor, Geographic Map Mapper, Hidden Issue Scanner & Official Draft Generator</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# Navigation Tabs (6 Comprehensive Tabs)
+# Navigation Tabs
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Financial Summary & Cost Breakdown", 
     "🗺️ Geographic & Map Mapper", 
@@ -65,7 +122,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📝 Official Reply & Draft Generator"
 ])
 
-# Helper Function for OCR / Text Extraction from Large PDFs with Caching
+# Helper Functions
 @st.cache_data(show_spinner=False)
 def extract_text_from_pdf(uploaded_file_bytes, file_name):
     reader = pypdf.PdfReader(io.BytesIO(uploaded_file_bytes))
@@ -80,11 +137,38 @@ def extract_text_from_pdf(uploaded_file_bytes, file_name):
     return text
 
 def truncate_text_safely(text, max_chars=40000):
-    """Safely truncates text at word boundaries to avoid cutting words for AI."""
     if len(text) <= max_chars:
         return text
     truncated = text[:max_chars].rsplit(' ', 1)[0]
     return truncated + "\n\n[...Text truncated for AI context limits...]"
+
+def clean_markdown_for_docx(text):
+    """Remove markdown asterisks and clean formatting for Word documents."""
+    # Remove bold/italic markdown
+    text = re.sub(r'\*\*\*(.*?)\*\*\*', r'\1', text)  # ***text***
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)       # **text**
+    text = re.sub(r'\*(.*?)\*', r'\1', text)           # *text*
+    text = re.sub(r'_(.*?)_', r'\1', text)             # _text_
+    
+    # Remove heading markers
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    
+    return text
+
+def add_logo_to_docx(doc):
+    """Add logo to Word document header."""
+    try:
+        section = doc.sections[0]
+        header = section.header
+        header_para = header.paragraphs[0]
+        header_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Add logo to header
+        run = header_para.add_run()
+        run.add_picture("kp_logo.png", width=Inches(1.0))
+        header_para.add_run("\nGOVERNMENT OF KHYBER PAKHTUNKHWA\nSECRETARIAT")
+    except:
+        pass  # Logo not found, skip
 
 KP_DISTRICTS_DB = {
     "Peshawar": [34.0151, 71.5249], "Mardan": [34.1989, 72.0406], "Swat": [34.7717, 72.3602],
@@ -149,7 +233,6 @@ with tab2:
             
             st_folium(m, width=700, height=400)
             
-            # In-memory file generation for map
             map_html_str = m._repr_html_()
             st.download_button("📥 Download Interactive Map (.html)", data=map_html_str.encode('utf-8'), file_name=f"{base_name_m}_Map.html", mime="text/html")
     else:
@@ -258,10 +341,19 @@ File 2: {truncate_text_safely(text_rev, 20000)}
                     st.markdown("### 📊 Detailed Comparative Report")
                     st.markdown(comparison_result)
                     
-                    # In-memory docx generation
+                    # Clean and format for DocX
+                    cleaned_result = clean_markdown_for_docx(comparison_result)
+                    
                     comp_doc = Document()
+                    add_logo_to_docx(comp_doc)
                     comp_doc.add_heading(f"Comparative Analysis", level=1)
-                    comp_doc.add_paragraph(comparison_result)
+                    
+                    # Add paragraphs with proper spacing
+                    for para_text in cleaned_result.split('\n\n'):
+                        if para_text.strip():
+                            p = comp_doc.add_paragraph(para_text.strip())
+                            p.paragraph_format.space_after = Pt(12)
+                            p.paragraph_format.line_spacing = 1.5
                     
                     docx_bytes = io.BytesIO()
                     comp_doc.save(docx_bytes)
@@ -302,20 +394,31 @@ with tab6:
                     st.markdown("### 📋 Generated Draft Preview")
                     st.markdown(response_text)
                     
+                    # Clean markdown and create professional document
+                    cleaned_response = clean_markdown_for_docx(response_text)
+                    
                     doc = Document()
+                    add_logo_to_docx(doc)
+                    
+                    # Add header section
                     p = doc.add_paragraph()
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    run = p.add_run("GOVERNMENT OF KHYBER PAKHTUNKHWA\nSECRETARIAT - OFFICIAL CORRESPONDENCE")
+                    run = p.add_run("\nGOVERNMENT OF KHYBER PAKHTUNKHWA\nSECRETARIAT - OFFICIAL CORRESPONDENCE\n")
                     run.bold = True
                     run.font.size = Pt(14)
+                    doc.add_paragraph("_" * 80)
                     
-                    for line in response_text.split("\n"):
-                        clean_line = line.strip().replace("**", "").replace("#", "")
-                        if not clean_line: continue
-                        if line.startswith("#"): doc.add_heading(clean_line, level=2)
-                        else: doc.add_paragraph(clean_line)
+                    # Add content with proper spacing
+                    for line in cleaned_response.split('\n'):
+                        line = line.strip()
+                        if not line:
+                            doc.add_paragraph()  # Add blank line for spacing
+                            continue
+                        
+                        p_para = doc.add_paragraph(line)
+                        p_para.paragraph_format.space_after = Pt(12)
+                        p_para.paragraph_format.line_spacing = 1.5
                     
-                    # In-memory docx generation
                     docx_bytes_reply = io.BytesIO()
                     doc.save(docx_bytes_reply)
                     docx_bytes_reply.seek(0)
