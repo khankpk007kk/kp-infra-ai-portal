@@ -1,7 +1,6 @@
-streamlit>=1.30.0
-pypdf>=4.0.0
-pandas>=2.0.0
-openai>=1.0.0
-python-docx>=1.0.0
-folium>=0.14.0
-streamlit-folium>=0.13.0
+streamlit
+pypdf
+folium
+streamlit-folium
+openai
+python-docx
