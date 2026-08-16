@@ -27,7 +27,7 @@ if "map_filename" not in st.session_state:
 if "detected_districts" not in st.session_state:
     st.session_state.detected_districts = []
 
-# ============ PREMIUM CUSTOM STYLING (OVERRIDES DEFAULT THEME) ============
+# ============ PREMIUM CUSTOM STYLING ============
 st.markdown("""
 <style>
     /* --- FORCE DARK PREMIUM BACKGROUND --- */
@@ -35,7 +35,6 @@ st.markdown("""
         background: linear-gradient(135deg, #0a0f24 0%, #162254 40%, #0a0f24 80%) !important;
         background-attachment: fixed !important;
     }
-    /* Animated gradient overlay */
     .stApp::before {
         content: '';
         position: fixed;
@@ -64,42 +63,52 @@ st.markdown("""
         box-shadow: 0 30px 60px rgba(0,0,0,0.7) !important;
     }
 
-    /* --- TEXT COLORS --- */
+    /* --- TEXT COLORS (Improved Readability) --- */
     body, p, span, label, div, .stMarkdown, caption, .stTextInput > label {
-        color: #f0f4ff !important;
+        color: #e8eeff !important;
         font-weight: 500 !important;
     }
     h1, h2, h3, h4, h5, .big-title, .sub-header, .config-title {
         color: #f9d976 !important;
-        text-shadow: 0 2px 15px rgba(249, 217, 118, 0.3) !important;
+        text-shadow: 0 2px 12px rgba(249, 217, 118, 0.35) !important;
     }
     .big-title {
-        font-size: 44px !important;
+        font-size: 42px !important;
         font-weight: 900 !important;
         text-align: center !important;
         letter-spacing: 1px !important;
     }
     .sub-header {
-        color: #b0c4ff !important;
-        font-size: 18px !important;
+        color: #a8c0ff !important;
+        font-size: 17px !important;
         font-weight: 600 !important;
         text-align: center !important;
-        opacity: 0.9 !important;
+        opacity: 0.95 !important;
+    }
+    .config-title {
+        font-size: 22px !important;
+        font-weight: 700 !important;
+        margin-top: 10px !important;
     }
 
-    /* --- LOGO WRAPPER & IMAGE ANIMATION (SPINNING LOGO) --- */
+    /* --- LOGO WRAPPER (Non-clickable + 12-piece continuous animation) --- */
     .logo-wrapper {
         position: relative;
-        display: inline-block;
-        padding: 10px;
-        border-radius: 50%;
-        transition: all 0.3s ease;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 10px auto;
+        pointer-events: none !important;   /* LOGO CLICKABLE NAHI HOGI */
+        user-select: none !important;
     }
-    /* 12-piece spinning ring - exactly around the image */
+
+    /* 12-piece spinning ring */
     .logo-wrapper::before {
         content: '';
         position: absolute;
-        top: -6px; left: -6px; right: -6px; bottom: -6px;
+        top: -8px; left: -8px; right: -8px; bottom: -8px;
         border-radius: 50%;
         background: repeating-conic-gradient(
             from 0deg,
@@ -128,82 +137,81 @@ st.markdown("""
             #f9d976 330deg 345deg,
             #1a2a6c 345deg 360deg
         );
-        animation: spinRing 7s linear infinite;
-        mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #fff calc(100% - 2px));
-        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #fff calc(100% - 2px));
-        z-index: 10;
-        pointer-events: none;
+        animation: spinRing 6s linear infinite;
+        mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #fff calc(100% - 3px));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #fff calc(100% - 3px));
+        z-index: 2;
+        pointer-events: none !important;
     }
-    /* Glowing pulse behind logo */
+
+    /* Soft glow behind logo */
     .logo-wrapper::after {
         content: '';
         position: absolute;
-        top: -25px; left: -25px; right: -25px; bottom: -25px;
+        top: -20px; left: -20px; right: -20px; bottom: -20px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(249, 217, 118, 0.2) 0%, transparent 70%);
-        animation: pulseGlow 3s ease-in-out infinite alternate;
-        z-index: 5;
-        pointer-events: none;
+        background: radial-gradient(circle, rgba(249, 217, 118, 0.25) 0%, transparent 70%);
+        animation: pulseGlow 2.8s ease-in-out infinite alternate;
+        z-index: 1;
+        pointer-events: none !important;
     }
+
     @keyframes spinRing {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
     @keyframes pulseGlow {
-        0% { transform: scale(0.9); opacity: 0.3; }
-        100% { transform: scale(1.3); opacity: 0.8; }
+        0% { transform: scale(0.92); opacity: 0.35; }
+        100% { transform: scale(1.25); opacity: 0.75; }
     }
 
-    /* --- LOGO IMAGE ITSELF SPINNING & GLOWING --- */
-    .logo-wrapper img {
+    /* Logo image - static (no spin) + not clickable */
+    .logo-wrapper img,
+    .logo-wrapper [data-testid="stImage"] img {
         border-radius: 50% !important;
-        animation: logoSpin 20s linear infinite, logoGlowPulse 3s ease-in-out infinite alternate !important;
-        box-shadow: 0 0 30px rgba(249, 217, 118, 0.2) !important;
+        width: 180px !important;
+        height: 180px !important;
+        object-fit: cover !important;
+        box-shadow: 0 0 25px rgba(249, 217, 118, 0.25) !important;
+        pointer-events: none !important;
+        user-select: none !important;
         display: block !important;
-        width: 100% !important;
-        max-width: 180px !important;
         margin: 0 auto !important;
-    }
-    @keyframes logoSpin {
-        0% { transform: rotate(0deg) scale(1); }
-        100% { transform: rotate(360deg) scale(1); }
-    }
-    @keyframes logoGlowPulse {
-        0% { filter: drop-shadow(0 0 5px #f9d976) brightness(1); }
-        100% { filter: drop-shadow(0 0 25px #f9d976) brightness(1.2); }
+        position: relative;
+        z-index: 3;
     }
 
-    /* --- NAVIGATION TABS (PREMIUM GOLD/BLUE) --- */
+    /* --- NAVIGATION TABS --- */
     .stTabs [data-baseweb="tab-list"] {
-        background: rgba(26, 42, 108, 0.7) !important;
-        backdrop-filter: blur(10px) !important;
+        background: rgba(26, 42, 108, 0.75) !important;
+        backdrop-filter: blur(12px) !important;
         border-radius: 16px !important;
         padding: 8px !important;
         gap: 6px !important;
-        border: 1px solid rgba(249, 217, 118, 0.2) !important;
+        border: 1px solid rgba(249, 217, 118, 0.25) !important;
         box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #b0c4ff !important;
+        color: #b8c9ff !important;
         font-weight: 700 !important;
         border-radius: 12px !important;
-        padding: 12px 24px !important;
-        transition: all 0.3s ease !important;
+        padding: 12px 22px !important;
+        transition: all 0.25s ease !important;
         border: none !important;
         background: transparent !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(249, 217, 118, 0.15) !important;
+        background: rgba(249, 217, 118, 0.18) !important;
         color: #f9d976 !important;
     }
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
         color: #0a0f24 !important;
-        box-shadow: 0 4px 15px rgba(249, 217, 118, 0.4) !important;
+        box-shadow: 0 4px 18px rgba(249, 217, 118, 0.45) !important;
         font-weight: 800 !important;
     }
 
-    /* --- BUTTONS (ROYAL GOLD) --- */
+    /* --- BUTTONS --- */
     .stButton>button, .stDownloadButton>button {
         width: 100% !important;
         border-radius: 14px !important;
@@ -211,51 +219,48 @@ st.markdown("""
         background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
         color: #0a0f24 !important;
         border: none !important;
-        padding: 0.6rem 1.2rem !important;
-        box-shadow: 0 6px 20px rgba(249, 217, 118, 0.25) !important;
-        transition: all 0.3s ease !important;
+        padding: 0.65rem 1.2rem !important;
+        box-shadow: 0 6px 20px rgba(249, 217, 118, 0.3) !important;
+        transition: all 0.25s ease !important;
         text-transform: uppercase !important;
         letter-spacing: 0.5px !important;
     }
     .stButton>button:hover, .stDownloadButton>button:hover {
         transform: scale(1.02) !important;
-        box-shadow: 0 8px 30px rgba(249, 217, 118, 0.5) !important;
+        box-shadow: 0 8px 28px rgba(249, 217, 118, 0.55) !important;
         background: linear-gradient(135deg, #ffe28a 0%, #f9c830 100%) !important;
     }
-    .stButton>button:active {
-        transform: scale(0.98) !important;
-    }
 
-    /* --- INPUT FIELDS (GLASS) --- */
-    .stTextInput>div>div>input, .stSelectbox>div>div, .stTextArea>div>div>textarea {
-        background: rgba(255, 255, 255, 0.08) !important;
+    /* --- INPUTS --- */
+    .stTextInput>div>div>input, 
+    .stSelectbox>div>div, 
+    .stTextArea>div>div>textarea {
+        background: rgba(255, 255, 255, 0.09) !important;
         backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(249, 217, 118, 0.3) !important;
+        border: 1px solid rgba(249, 217, 118, 0.35) !important;
         border-radius: 12px !important;
         color: #f0f4ff !important;
         padding: 10px 15px !important;
         font-weight: 500 !important;
     }
-    .stTextInput>div>div>input:focus, .stSelectbox>div>div:focus {
+    .stTextInput>div>div>input:focus, 
+    .stSelectbox>div>div:focus {
         border: 1px solid #f9d976 !important;
-        box-shadow: 0 0 20px rgba(249, 217, 118, 0.15) !important;
+        box-shadow: 0 0 18px rgba(249, 217, 118, 0.2) !important;
     }
     label {
-        color: #b0c4ff !important;
+        color: #b8c9ff !important;
         font-weight: 600 !important;
     }
 
-    /* --- WARNING BOX --- */
+    /* --- ALERTS & UPLOADER --- */
     .stAlert {
         background: rgba(249, 217, 118, 0.12) !important;
-        backdrop-filter: blur(10px) !important;
         border: 1px solid #f9d976 !important;
         border-radius: 16px !important;
         color: #f9d976 !important;
         font-weight: 600 !important;
     }
-
-    /* --- FILE UPLOADER --- */
     .stFileUploader > div > div {
         background: rgba(255,255,255,0.05) !important;
         border: 2px dashed rgba(249, 217, 118, 0.4) !important;
@@ -264,14 +269,11 @@ st.markdown("""
     }
     .stFileUploader > div > div:hover {
         border-color: #f9d976 !important;
-        background: rgba(249, 217, 118, 0.05) !important;
+        background: rgba(249, 217, 118, 0.06) !important;
     }
-
-    /* --- INFO BOXES --- */
     .stInfo, .stSuccess, .stError {
         border-radius: 14px !important;
         font-weight: 600 !important;
-        backdrop-filter: blur(10px) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -279,12 +281,11 @@ st.markdown("""
 # ============ DATA PRIVACY WARNING ============
 st.warning("🔒 **Data Privacy Notice:** Your document text is sent to OpenRouter (third-party AI). Do NOT upload classified or highly sensitive government documents.")
 
-# ============ LOGO (CENTER) WITH ANIMATION ON THE IMAGE ITSELF ============
+# ============ LOGO (CENTER) - Non-clickable + 12-piece continuous ring ============
 lc1, lc2, lc3 = st.columns([1, 1.2, 1])
 with lc2:
-    st.markdown('<div class="logo-wrapper" style="display: flex; justify-content: center; align-items: center;">', unsafe_allow_html=True)
+    st.markdown('<div class="logo-wrapper">', unsafe_allow_html=True)
     try:
-        # The animation will automatically apply to the <img> tag inside this div
         st.image("kp_logo.png", use_container_width=True)
     except:
         st.markdown("🏛️ **Place `kp_logo.png` here**")
@@ -323,7 +324,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📝 Draft Generator"
 ])
 
-# ============ HELPER FUNCTIONS (FULLY FUNCTIONAL) ============
+# ============ HELPER FUNCTIONS ============
 @st.cache_data(show_spinner=False)
 def validate_and_extract_pdf(uploaded_bytes, file_name):
     try:
@@ -419,7 +420,7 @@ Document Text:
     else:
         st.info("👆 Financial summary extract karne ke liye PC-1 PDF upload karein.")
 
-# ============ TAB 2 (MAP WITH GENERATE BUTTON) ============
+# ============ TAB 2 ============
 with tab2:
     st.markdown("### 🗺️ ADP Project Location & Geographic Map Mapper")
     map_file = st.file_uploader("Upload PC-1 / ADP PDF for Geographic Mapping", type=["pdf"], key="map_pdf")
