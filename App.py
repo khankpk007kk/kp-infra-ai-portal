@@ -8,7 +8,6 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
 import re
-import logging
 
 # ============ PAGE CONFIG ============
 st.set_page_config(
@@ -18,22 +17,33 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ============ SESSION STATE INIT ============
+# ============ SESSION STATE ============
 if "extracted_texts" not in st.session_state:
-    st.session_state.extracted_texts = {}  # cache for uploaded files
+    st.session_state.extracted_texts = {}
 if "map_html" not in st.session_state:
     st.session_state.map_html = None
 if "map_filename" not in st.session_state:
     st.session_state.map_filename = "map"
+if "detected_districts" not in st.session_state:
+    st.session_state.detected_districts = []
 
-# ============ CUSTOM STYLING + ANIMATIONS ============
+# ============ PREMIUM CUSTOM STYLING (OVERRIDES DEFAULT THEME) ============
 st.markdown("""
 <style>
-    /* --- ANIMATED BACKGROUND (Moving Light Effect) --- */
+    /* --- FORCE DARK PREMIUM BACKGROUND --- */
     .stApp {
-        background: linear-gradient(-45deg, #0a192f, #1e3a8a, #0f172a, #1e3a8a) !important;
-        background-size: 400% 400% !important;
-        animation: gradientBG 18s ease infinite !important;
+        background: linear-gradient(135deg, #0a0f24 0%, #162254 40%, #0a0f24 80%) !important;
+        background-attachment: fixed !important;
+    }
+    /* Animated gradient overlay */
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(-45deg, #1a2a6c, #0a0f24, #2a1a4a, #0a0f24);
+        background-size: 400% 400%;
+        animation: gradientBG 22s ease infinite;
+        z-index: -1;
     }
     @keyframes gradientBG {
         0% { background-position: 0% 50%; }
@@ -41,60 +51,86 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* --- MAIN CONTAINER TRANSPARENCY FOR READABILITY --- */
+    /* --- MAIN GLASS CONTAINER --- */
     .main .block-container {
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(10px);
-        border-radius: 30px;
-        padding: 2rem 2rem 2rem 2rem;
-        margin-top: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        background: rgba(255, 255, 255, 0.07) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border-radius: 40px !important;
+        padding: 2.5rem 2.5rem !important;
+        margin-top: 15px !important;
+        margin-bottom: 25px !important;
+        border: 1px solid rgba(255, 215, 0, 0.15) !important;
+        box-shadow: 0 30px 60px rgba(0,0,0,0.7) !important;
     }
 
-    /* --- LOGO WRAPPER WITH 12-PIECE ANIMATED RING --- */
+    /* --- TEXT COLORS --- */
+    body, p, span, label, div, .stMarkdown, caption, .stTextInput > label {
+        color: #f0f4ff !important;
+        font-weight: 500 !important;
+    }
+    h1, h2, h3, h4, h5, .big-title, .sub-header, .config-title {
+        color: #f9d976 !important;
+        text-shadow: 0 2px 15px rgba(249, 217, 118, 0.3) !important;
+    }
+    .big-title {
+        font-size: 44px !important;
+        font-weight: 900 !important;
+        text-align: center !important;
+        letter-spacing: 1px !important;
+    }
+    .sub-header {
+        color: #b0c4ff !important;
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        opacity: 0.9 !important;
+    }
+
+    /* --- LOGO WRAPPER & IMAGE ANIMATION (SPINNING LOGO) --- */
     .logo-wrapper {
         position: relative;
         display: inline-block;
-        padding: 12px;
+        padding: 10px;
         border-radius: 50%;
+        transition: all 0.3s ease;
     }
-    /* 12-piece spinning ring */
+    /* 12-piece spinning ring - exactly around the image */
     .logo-wrapper::before {
         content: '';
         position: absolute;
-        top: -8px; left: -8px; right: -8px; bottom: -8px;
+        top: -6px; left: -6px; right: -6px; bottom: -6px;
         border-radius: 50%;
         background: repeating-conic-gradient(
             from 0deg,
-            #fbbf24 0deg 15deg,
-            #1e3a8a 15deg 30deg,
-            #fbbf24 30deg 45deg,
-            #1e3a8a 45deg 60deg,
-            #fbbf24 60deg 75deg,
-            #1e3a8a 75deg 90deg,
-            #fbbf24 90deg 105deg,
-            #1e3a8a 105deg 120deg,
-            #fbbf24 120deg 135deg,
-            #1e3a8a 135deg 150deg,
-            #fbbf24 150deg 165deg,
-            #1e3a8a 165deg 180deg,
-            #fbbf24 180deg 195deg,
-            #1e3a8a 195deg 210deg,
-            #fbbf24 210deg 225deg,
-            #1e3a8a 225deg 240deg,
-            #fbbf24 240deg 255deg,
-            #1e3a8a 255deg 270deg,
-            #fbbf24 270deg 285deg,
-            #1e3a8a 285deg 300deg,
-            #fbbf24 300deg 315deg,
-            #1e3a8a 315deg 330deg,
-            #fbbf24 330deg 345deg,
-            #1e3a8a 345deg 360deg
+            #f9d976 0deg 15deg,
+            #1a2a6c 15deg 30deg,
+            #f9d976 30deg 45deg,
+            #1a2a6c 45deg 60deg,
+            #f9d976 60deg 75deg,
+            #1a2a6c 75deg 90deg,
+            #f9d976 90deg 105deg,
+            #1a2a6c 105deg 120deg,
+            #f9d976 120deg 135deg,
+            #1a2a6c 135deg 150deg,
+            #f9d976 150deg 165deg,
+            #1a2a6c 165deg 180deg,
+            #f9d976 180deg 195deg,
+            #1a2a6c 195deg 210deg,
+            #f9d976 210deg 225deg,
+            #1a2a6c 225deg 240deg,
+            #f9d976 240deg 255deg,
+            #1a2a6c 255deg 270deg,
+            #f9d976 270deg 285deg,
+            #1a2a6c 285deg 300deg,
+            #f9d976 300deg 315deg,
+            #1a2a6c 315deg 330deg,
+            #f9d976 330deg 345deg,
+            #1a2a6c 345deg 360deg
         );
-        animation: spinRing 6s linear infinite;
-        mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #fff calc(100% - 3px));
-        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #fff calc(100% - 3px));
+        animation: spinRing 7s linear infinite;
+        mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #fff calc(100% - 2px));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #fff calc(100% - 2px));
         z-index: 10;
         pointer-events: none;
     }
@@ -102,10 +138,10 @@ st.markdown("""
     .logo-wrapper::after {
         content: '';
         position: absolute;
-        top: -20px; left: -20px; right: -20px; bottom: -20px;
+        top: -25px; left: -25px; right: -25px; bottom: -25px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(251,191,36,0.25) 0%, transparent 70%);
-        animation: pulseGlow 2.5s ease-in-out infinite alternate;
+        background: radial-gradient(circle, rgba(249, 217, 118, 0.2) 0%, transparent 70%);
+        animation: pulseGlow 3s ease-in-out infinite alternate;
         z-index: 5;
         pointer-events: none;
     }
@@ -114,135 +150,182 @@ st.markdown("""
         100% { transform: rotate(360deg); }
     }
     @keyframes pulseGlow {
-        0% { transform: scale(0.95); opacity: 0.5; }
-        100% { transform: scale(1.2); opacity: 1; }
+        0% { transform: scale(0.9); opacity: 0.3; }
+        100% { transform: scale(1.3); opacity: 0.8; }
     }
 
-    /* --- OVERALL BOLD TEXT --- */
-    body, p, span, label, div, .stMarkdown, caption {
-        font-weight: 600 !important;
+    /* --- LOGO IMAGE ITSELF SPINNING & GLOWING --- */
+    .logo-wrapper img {
+        border-radius: 50% !important;
+        animation: logoSpin 20s linear infinite, logoGlowPulse 3s ease-in-out infinite alternate !important;
+        box-shadow: 0 0 30px rgba(249, 217, 118, 0.2) !important;
+        display: block !important;
+        width: 100% !important;
+        max-width: 180px !important;
+        margin: 0 auto !important;
     }
-    h1, h2, h3, h4, h5 { font-weight: 800 !important; }
-
-    .big-title {
-        font-size: 42px;
-        font-weight: 900;
-        color: #1E3A8A;
-        text-align: center;
-        margin-bottom: 4px;
+    @keyframes logoSpin {
+        0% { transform: rotate(0deg) scale(1); }
+        100% { transform: rotate(360deg) scale(1); }
     }
-    .sub-header {
-        color: #4B5563;
-        font-size: 16px;
-        font-weight: 700;
-        text-align: center;
-        margin-bottom: 18px;
-    }
-    .config-title {
-        font-size: 18px;
-        font-weight: 800;
-        color: #1E3A8A;
-        text-align: center;
-        margin-top: 10px;
+    @keyframes logoGlowPulse {
+        0% { filter: drop-shadow(0 0 5px #f9d976) brightness(1); }
+        100% { filter: drop-shadow(0 0 25px #f9d976) brightness(1.2); }
     }
 
-    /* --- HIDE SIDEBAR --- */
-    section[data-testid="stSidebar"] { display: none; }
-
-    /* --- SOLID NAVIGATION BAR --- */
+    /* --- NAVIGATION TABS (PREMIUM GOLD/BLUE) --- */
     .stTabs [data-baseweb="tab-list"] {
-        background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
-        border-radius: 14px;
-        padding: 8px;
-        gap: 6px;
-        box-shadow: 0 6px 18px rgba(30,58,138,0.35);
+        background: rgba(26, 42, 108, 0.7) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 16px !important;
+        padding: 8px !important;
+        gap: 6px !important;
+        border: 1px solid rgba(249, 217, 118, 0.2) !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #ffffff !important;
+        color: #b0c4ff !important;
         font-weight: 700 !important;
-        border-radius: 10px;
-        padding: 10px 18px;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
+        transition: all 0.3s ease !important;
         border: none !important;
+        background: transparent !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(255,255,255,0.18);
+        background: rgba(249, 217, 118, 0.15) !important;
+        color: #f9d976 !important;
     }
     .stTabs [aria-selected="true"] {
-        background: #ffffff !important;
-        color: #1E3A8A !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
+        color: #0a0f24 !important;
+        box-shadow: 0 4px 15px rgba(249, 217, 118, 0.4) !important;
+        font-weight: 800 !important;
     }
 
-    /* --- BUTTONS --- */
+    /* --- BUTTONS (ROYAL GOLD) --- */
     .stButton>button, .stDownloadButton>button {
-        width: 100%;
-        border-radius: 12px;
-        font-weight: 700;
-        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
-        color: white !important;
-        border: none;
+        width: 100% !important;
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+        background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
+        color: #0a0f24 !important;
+        border: none !important;
+        padding: 0.6rem 1.2rem !important;
+        box-shadow: 0 6px 20px rgba(249, 217, 118, 0.25) !important;
+        transition: all 0.3s ease !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
-    /* Override for map generate button specifically */
-    .stButton>button[kind="secondary"] { 
-        background: #1E3A8A; 
+    .stButton>button:hover, .stDownloadButton>button:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 8px 30px rgba(249, 217, 118, 0.5) !important;
+        background: linear-gradient(135deg, #ffe28a 0%, #f9c830 100%) !important;
+    }
+    .stButton>button:active {
+        transform: scale(0.98) !important;
+    }
+
+    /* --- INPUT FIELDS (GLASS) --- */
+    .stTextInput>div>div>input, .stSelectbox>div>div, .stTextArea>div>div>textarea {
+        background: rgba(255, 255, 255, 0.08) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(249, 217, 118, 0.3) !important;
+        border-radius: 12px !important;
+        color: #f0f4ff !important;
+        padding: 10px 15px !important;
+        font-weight: 500 !important;
+    }
+    .stTextInput>div>div>input:focus, .stSelectbox>div>div:focus {
+        border: 1px solid #f9d976 !important;
+        box-shadow: 0 0 20px rgba(249, 217, 118, 0.15) !important;
+    }
+    label {
+        color: #b0c4ff !important;
+        font-weight: 600 !important;
     }
 
     /* --- WARNING BOX --- */
     .stAlert {
-        border-radius: 12px;
-        font-weight: 600;
+        background: rgba(249, 217, 118, 0.12) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid #f9d976 !important;
+        border-radius: 16px !important;
+        color: #f9d976 !important;
+        font-weight: 600 !important;
+    }
+
+    /* --- FILE UPLOADER --- */
+    .stFileUploader > div > div {
+        background: rgba(255,255,255,0.05) !important;
+        border: 2px dashed rgba(249, 217, 118, 0.4) !important;
+        border-radius: 16px !important;
+        padding: 20px !important;
+    }
+    .stFileUploader > div > div:hover {
+        border-color: #f9d976 !important;
+        background: rgba(249, 217, 118, 0.05) !important;
+    }
+
+    /* --- INFO BOXES --- */
+    .stInfo, .stSuccess, .stError {
+        border-radius: 14px !important;
+        font-weight: 600 !important;
+        backdrop-filter: blur(10px) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ============ DATA PRIVACY WARNING ============
-st.warning("⚠️ **Data Privacy Notice:** Your document text is sent to OpenRouter (third-party AI). Do NOT upload classified or highly sensitive government documents.")
+st.warning("🔒 **Data Privacy Notice:** Your document text is sent to OpenRouter (third-party AI). Do NOT upload classified or highly sensitive government documents.")
 
-# ============ LOGO (TOP CENTER) WITH 12-PIECE ANIMATION ============
+# ============ LOGO (CENTER) WITH ANIMATION ON THE IMAGE ITSELF ============
 lc1, lc2, lc3 = st.columns([1, 1.2, 1])
 with lc2:
-    # Wrapping the image in a div with the animated ring class
-    st.markdown('<div class="logo-wrapper" style="display: flex; justify-content: center;">', unsafe_allow_html=True)
+    st.markdown('<div class="logo-wrapper" style="display: flex; justify-content: center; align-items: center;">', unsafe_allow_html=True)
     try:
+        # The animation will automatically apply to the <img> tag inside this div
         st.image("kp_logo.png", use_container_width=True)
     except:
-        st.markdown("🏛️ **KP Logo** (Place `kp_logo.png` here)")
+        st.markdown("🏛️ **Place `kp_logo.png` here**")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ============ BIG BOLD TITLE ============
+# ============ TITLE ============
 st.markdown('<h1 class="big-title">🏛️ KP Secretariat – Smart PC-1 & PDF Review Portal</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Financial Summary Extractor • Geographic Map Mapper • Hidden Issue Scanner • Official Draft Generator</p>', unsafe_allow_html=True)
 
-# ============ CENTERED SYSTEM CONFIGURATIONS ============
+# ============ CONFIGURATIONS CARD ============
 st.markdown('<p class="config-title">⚙️ System Configurations</p>', unsafe_allow_html=True)
 cfg_l, cfg_c, cfg_r = st.columns([1, 2, 1])
 with cfg_c:
-    BUILTIN_API_KEY = ""
-    api_key = st.text_input("🔑 OpenRouter API Key", value=BUILTIN_API_KEY, type="password", placeholder="Apni OpenRouter API key yahan enter karein...")
-    model_name = st.selectbox(
-        "🤖 Select AI Model via OpenRouter",
-        [
-            "meta-llama/llama-3.3-70b-instruct",
-            "google/gemini-2.0-flash-001",
-            "deepseek/deepseek-chat"
-        ]
-    )
+    with st.container():
+        st.markdown('<div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; border: 1px solid rgba(249,217,118,0.2);">', unsafe_allow_html=True)
+        BUILTIN_API_KEY = ""
+        api_key = st.text_input("🔑 OpenRouter API Key", value=BUILTIN_API_KEY, type="password", placeholder="Apni OpenRouter API key yahan enter karein...")
+        model_name = st.selectbox(
+            "🤖 Select AI Model via OpenRouter",
+            [
+                "meta-llama/llama-3.3-70b-instruct",
+                "google/gemini-2.0-flash-001",
+                "deepseek/deepseek-chat"
+            ]
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("---")
 
-# ============ NAVIGATION TABS ============
+# ============ TABS ============
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 Financial Summary & Cost Breakdown", 
-    "🗺️ Geographic & Map Mapper", 
-    "🔍 Red-Flag & Hidden Issue Scanner",
-    "💬 Deep Chat with Massive PDF",
-    "⚖️ PC-1 Comparative Analysis",
-    "📝 Official Reply & Draft Generator"
+    "📊 Financial Summary", 
+    "🗺️ Map Mapper", 
+    "🔍 Issue Scanner",
+    "💬 Deep Chat",
+    "⚖️ Comparative Analysis",
+    "📝 Draft Generator"
 ])
 
-# ============ HELPER FUNCTIONS ============
+# ============ HELPER FUNCTIONS (FULLY FUNCTIONAL) ============
 @st.cache_data(show_spinner=False)
 def validate_and_extract_pdf(uploaded_bytes, file_name):
-    """Validates PDF and extracts text with error handling."""
     try:
         reader = pypdf.PdfReader(io.BytesIO(uploaded_bytes))
         if len(reader.pages) == 0:
@@ -259,10 +342,8 @@ def validate_and_extract_pdf(uploaded_bytes, file_name):
         raise ValueError(f"PDF Processing Error: {str(e)}")
 
 def safe_truncate_text(text, max_chars=35000):
-    """Truncate safely, ensuring we don't break words if possible."""
     if len(text) <= max_chars:
         return text
-    # Try to cut at last space within limit
     truncated = text[:max_chars]
     last_space = truncated.rfind(' ')
     if last_space > 0:
@@ -288,14 +369,13 @@ def add_logo_to_docx(doc):
     except:
         pass
 
-# ============ ENHANCED DISTRICT DB WITH FUZZY ALIASES ============
+# --- District DB ---
 KP_DISTRICTS_DB = {
     "Peshawar": [34.0151, 71.5249], "Mardan": [34.1989, 72.0406], "Swat": [34.7717, 72.3602],
     "Abbottabad": [34.1463, 73.2117], "Bannu": [32.9889, 70.6042], "Dera Ismail Khan": [31.8314, 70.9014],
     "Kohat": [33.5889, 71.4429], "Swabi": [34.1167, 72.4667], "Nowshera": [34.0153, 71.9747],
     "Charsadda": [34.1526, 71.7381], "Mansehra": [34.3333, 73.2000], "Haripur": [33.9994, 72.9342]
 }
-# Fuzzy aliases for better detection
 FUZZY_ALIASES = {
     "di khan": "Dera Ismail Khan", "d.i. khan": "Dera Ismail Khan", "pesh": "Peshawar",
     "mard": "Mardan", "swabi": "Swabi", "nowshera": "Nowshera", "charsadda": "Charsadda",
@@ -303,7 +383,7 @@ FUZZY_ALIASES = {
     "abbottabad": "Abbottabad", "swat": "Swat"
 }
 
-# ============ TAB 1: FINANCIAL EXTRACTION ============
+# ============ TAB 1 ============
 with tab1:
     st.markdown("### 📊 PC-1 Financial Summary & Cost Extraction")
     fin_file = st.file_uploader("Upload PC-1 PDF for Financial Extraction", type=["pdf"], key="fin_pdf")
@@ -314,10 +394,8 @@ with tab1:
             else:
                 try:
                     with st.status("📄 Extracting financial schedules...", expanded=True) as status:
-                        # Extract with validation
                         fin_text = validate_and_extract_pdf(fin_file.getvalue(), fin_file.name)
                         st.session_state.extracted_texts[fin_file.name] = fin_text
-                        
                         client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
                         status.update(label="🤖 Sending to AI for financial analysis...")
                         fin_prompt = f"""
@@ -341,43 +419,35 @@ Document Text:
     else:
         st.info("👆 Financial summary extract karne ke liye PC-1 PDF upload karein.")
 
-# ============ TAB 2: GEOGRAPHIC MAPPER (WITH GENERATE BUTTON) ============
+# ============ TAB 2 (MAP WITH GENERATE BUTTON) ============
 with tab2:
     st.markdown("### 🗺️ ADP Project Location & Geographic Map Mapper")
     map_file = st.file_uploader("Upload PC-1 / ADP PDF for Geographic Mapping", type=["pdf"], key="map_pdf")
-    
     if map_file is not None:
         base_name_m = map_file.name.rsplit('.', 1)[0]
-        
-        # Detect districts on file upload
         try:
             map_text = validate_and_extract_pdf(map_file.getvalue(), map_file.name)
             st.session_state.extracted_texts[map_file.name] = map_text
-            
-            # Advanced detection with fuzzy matching
-            detected_districts = []
+            detected = []
             map_text_lower = map_text.lower()
             for dist in KP_DISTRICTS_DB.keys():
                 if dist.lower() in map_text_lower:
-                    detected_districts.append(dist)
-            # Fuzzy check
+                    detected.append(dist)
             for alias, real_name in FUZZY_ALIASES.items():
-                if alias in map_text_lower and real_name not in detected_districts:
-                    detected_districts.append(real_name)
-            
-            if not detected_districts:
-                detected_districts = ["Peshawar", "Mardan", "Swat"]  # Default
-            st.session_state['detected_districts'] = detected_districts
-            st.session_state['map_base_name'] = base_name_m
-            st.success(f"✅ Detected Districts: {', '.join(detected_districts)}")
+                if alias in map_text_lower and real_name not in detected:
+                    detected.append(real_name)
+            if not detected:
+                detected = ["Peshawar", "Mardan", "Swat"]
+            st.session_state.detected_districts = detected
+            st.session_state.map_filename = base_name_m
+            st.success(f"✅ Detected Districts: {', '.join(detected)}")
         except Exception as e:
             st.error(f"❌ PDF Read Error: {str(e)}")
             st.stop()
 
-        # Generate Map Button
         if st.button("🗺️ Generate Interactive Map", type="primary"):
             with st.spinner("🗺️ Rendering map..."):
-                detected = st.session_state.get('detected_districts', ["Peshawar"])
+                detected = st.session_state.detected_districts
                 center_coords = KP_DISTRICTS_DB.get(detected[0], [34.0151, 71.5249])
                 m = folium.Map(location=center_coords, zoom_start=8)
                 for dist in detected:
@@ -387,12 +457,9 @@ with tab2:
                         tooltip=dist, 
                         icon=folium.Icon(color="red", icon="info-sign")
                     ).add_to(m)
-                # Save map HTML to session state
                 st.session_state.map_html = m._repr_html_()
-                st.session_state.map_filename = st.session_state.get('map_base_name', 'map')
                 st.success("✅ Map generated successfully!")
 
-        # Display map if available in session
         if st.session_state.map_html:
             st.components.v1.html(st.session_state.map_html, height=450)
             st.download_button(
@@ -404,12 +471,11 @@ with tab2:
     else:
         st.info("👆 Geographic mapping ke liye PDF upload karein.")
 
-# ============ TAB 3: DEEP SCANNER ============
+# ============ TAB 3 ============
 with tab3:
     st.markdown("### 🔍 Scan Massive PDFs for Hidden Loopholes")
     scan_file = st.file_uploader("Upload PDF Document for Deep Scanning", type=["pdf"], key="scan_pdf")
     scan_focus = st.text_input("Specific area to focus on (Optional):", placeholder="Cost escalation, timeline delays...")
-    
     if st.button("🚀 Run Deep Issue Scanner", type="primary"):
         if not api_key:
             st.error("⚠️ Please provide API Key!")
@@ -441,19 +507,17 @@ Document Text:
             except Exception as e:
                 st.error(f"❌ Scan Error: {str(e)}")
 
-# ============ TAB 4: DEEP CHAT ============
+# ============ TAB 4 ============
 with tab4:
     st.markdown("### 💬 Deep Chat with Massive PDFs")
     chat_file = st.file_uploader("Upload Large PDF Document", type=["pdf"], key="chat_pdf")
     if chat_file is not None:
         try:
-            # Extract and cache
             if chat_file.name not in st.session_state.extracted_texts:
                 chat_pdf_text = validate_and_extract_pdf(chat_file.getvalue(), chat_file.name)
                 st.session_state.extracted_texts[chat_file.name] = chat_pdf_text
             else:
                 chat_pdf_text = st.session_state.extracted_texts[chat_file.name]
-            
             user_question = st.text_input("💬 Aap is document mein kya talaash kar rahe hain?")
             if st.button("🔍 Search & Answer from PDF", type="primary"):
                 if not api_key:
@@ -481,7 +545,7 @@ with tab4:
     else:
         st.info("👆 Pehle upar PDF upload karein.")
 
-# ============ TAB 5: COMPARATIVE ANALYSIS ============
+# ============ TAB 5 ============
 with tab5:
     st.markdown("### ⚖️ Compare Two Documents")
     col_orig, col_rev = st.columns(2)
@@ -489,7 +553,6 @@ with tab5:
         file_original = st.file_uploader("Upload First File", type=["pdf"], key="orig_file")
     with col_rev:
         file_revised = st.file_uploader("Upload Second File", type=["pdf"], key="rev_file")
-    
     if st.button("🔍 Run Comparative Analysis", type="primary"):
         if not api_key:
             st.error("⚠️ API Key missing!")
@@ -504,7 +567,6 @@ with tab5:
                     text_rev = validate_and_extract_pdf(file_revised.getvalue(), file_revised.name)
                     st.session_state.extracted_texts[file_original.name] = text_orig
                     st.session_state.extracted_texts[file_revised.name] = text_rev
-                    
                     status.update(label="🧠 AI generating comparison...")
                     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
                     comparison_prompt = f"""
@@ -523,11 +585,9 @@ File 2: {safe_truncate_text(text_rev, 20000)}
                     )
                     comparison_result = completion.choices[0].message.content
                     status.update(label="✅ Comparison Ready", state="complete")
-                    
                     st.markdown("### 📊 Detailed Comparative Report")
                     st.markdown(comparison_result)
                     
-                    # DOCX generation
                     cleaned_result = clean_markdown_for_docx(comparison_result)
                     comp_doc = Document()
                     add_logo_to_docx(comp_doc)
@@ -544,13 +604,12 @@ File 2: {safe_truncate_text(text_rev, 20000)}
             except Exception as e:
                 st.error(f"❌ Error: {str(e)}")
 
-# ============ TAB 6: DRAFT GENERATOR ============
+# ============ TAB 6 ============
 with tab6:
     st.markdown("### 📝 Generate Official Reply (.docx)")
     rep_file = st.file_uploader("Upload Observation Letter / PC-1 PDF", type=["pdf"], key="rep_pdf")
     task_option = st.selectbox("Choose Draft Type:", ["Official Reply", "Executive Summary", "Project Justification"])
     user_instructions = st.text_area("📝 Additional instructions:")
-    
     if st.button("🚀 Generate Official Word Document", type="primary"):
         if not api_key:
             st.error("⚠️ API Key missing!")
@@ -563,7 +622,6 @@ with tab6:
                     status.update(label="📄 Extracting source text...")
                     pdf_text = validate_and_extract_pdf(rep_file.getvalue(), rep_file.name)
                     st.session_state.extracted_texts[rep_file.name] = pdf_text
-                    
                     status.update(label="🧠 Generating draft with AI...")
                     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
                     system_prompt = "Expert Section Officer in KP Secretariat. Write formal govt correspondence."
@@ -577,11 +635,9 @@ with tab6:
                     )
                     response_text = completion.choices[0].message.content
                     status.update(label="✅ Draft generated", state="complete")
-                    
                     st.markdown("### 📋 Generated Draft Preview")
                     st.markdown(response_text)
                     
-                    # DOCX generation
                     cleaned_response = clean_markdown_for_docx(response_text)
                     doc = Document()
                     add_logo_to_docx(doc)
