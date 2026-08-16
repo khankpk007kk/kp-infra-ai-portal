@@ -30,13 +30,11 @@ if "detected_districts" not in st.session_state:
 # ============ PREMIUM CUSTOM STYLING ============
 st.markdown("""
 <style>
-    /* --- HALF WHITE / LIGHT BACKGROUND --- */
+    /* --- LIGHT / HALF WHITE BACKGROUND --- */
     .stApp {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%) !important;
         background-attachment: fixed !important;
     }
-
-    /* Soft animated overlay */
     .stApp::before {
         content: '';
         position: fixed;
@@ -45,7 +43,7 @@ st.markdown("""
         background-size: 400% 400%;
         animation: gradientBG 25s ease infinite;
         z-index: -1;
-        opacity: 0.7;
+        opacity: 0.65;
     }
     @keyframes gradientBG {
         0% { background-position: 0% 50%; }
@@ -55,47 +53,45 @@ st.markdown("""
 
     /* --- MAIN CONTAINER --- */
     .main .block-container {
-        background: rgba(255, 255, 255, 0.85) !important;
+        background: rgba(255, 255, 255, 0.88) !important;
         backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border-radius: 28px !important;
-        padding: 2.2rem 2.2rem !important;
-        margin-top: 15px !important;
-        margin-bottom: 25px !important;
-        border: 1px solid rgba(26, 42, 108, 0.12) !important;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.08) !important;
+        border-radius: 24px !important;
+        padding: 1.8rem 1.8rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 20px !important;
+        border: 1px solid rgba(26, 42, 108, 0.10) !important;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.07) !important;
     }
 
-    /* --- TEXT COLORS (Readable on light bg) --- */
-    body, p, span, label, div, .stMarkdown, caption, .stTextInput > label {
+    /* --- TEXT COLORS --- */
+    body, p, span, label, div, .stMarkdown, caption {
         color: #1e293b !important;
         font-weight: 500 !important;
     }
     h1, h2, h3, h4, h5, .big-title, .sub-header, .config-title {
-        color: #1a2a6c !important;
-        text-shadow: none !important;
+        color: #0f172a !important;
     }
     .big-title {
-        font-size: 40px !important;
+        font-size: 36px !important;
         font-weight: 900 !important;
         text-align: center !important;
-        letter-spacing: 0.5px !important;
-        color: #0f172a !important;
+        margin-bottom: 4px !important;
     }
     .sub-header {
         color: #475569 !important;
-        font-size: 16px !important;
+        font-size: 15px !important;
         font-weight: 600 !important;
         text-align: center !important;
+        margin-bottom: 18px !important;
     }
     .config-title {
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: 700 !important;
-        margin-top: 8px !important;
         color: #1a2a6c !important;
+        margin-bottom: 8px !important;
     }
 
-    /* --- LOGO (Perfect Center + Animation) --- */
+    /* --- LOGO (Centered + Animation) --- */
     div[data-testid="stImage"] {
         display: flex !important;
         justify-content: center !important;
@@ -103,31 +99,27 @@ st.markdown("""
         position: relative !important;
         pointer-events: none !important;
         user-select: none !important;
-        margin: 0 auto 10px auto !important;
+        margin: 0 auto 8px auto !important;
         width: 100% !important;
     }
-
     div[data-testid="stImage"] img {
         border-radius: 50% !important;
-        width: 170px !important;
-        height: 170px !important;
+        width: 160px !important;
+        height: 160px !important;
         object-fit: cover !important;
         pointer-events: none !important;
-        user-select: none !important;
-        box-shadow: 0 0 20px rgba(26, 42, 108, 0.15) !important;
+        box-shadow: 0 0 18px rgba(26, 42, 108, 0.15) !important;
         position: relative;
         z-index: 5;
         margin: 0 auto !important;
     }
-
-    /* 12-piece continuous spinning ring */
     div[data-testid="stImage"]::before {
         content: '';
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 190px;
-        height: 190px;
+        width: 180px;
+        height: 180px;
         transform: translate(-50%, -50%);
         border-radius: 50%;
         background: repeating-conic-gradient(
@@ -163,15 +155,13 @@ st.markdown("""
         z-index: 2;
         pointer-events: none !important;
     }
-
-    /* Soft glow */
     div[data-testid="stImage"]::after {
         content: '';
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 230px;
-        height: 230px;
+        width: 220px;
+        height: 220px;
         transform: translate(-50%, -50%);
         border-radius: 50%;
         background: radial-gradient(circle, rgba(249, 217, 118, 0.18) 0%, transparent 70%);
@@ -179,7 +169,6 @@ st.markdown("""
         z-index: 1;
         pointer-events: none !important;
     }
-
     @keyframes spinRing {
         0% { transform: translate(-50%, -50%) rotate(0deg); }
         100% { transform: translate(-50%, -50%) rotate(360deg); }
@@ -192,20 +181,19 @@ st.markdown("""
     /* --- TABS --- */
     .stTabs [data-baseweb="tab-list"] {
         background: #1a2a6c !important;
-        border-radius: 14px !important;
-        padding: 7px !important;
-        gap: 5px !important;
-        border: none !important;
-        box-shadow: 0 4px 15px rgba(26, 42, 108, 0.25) !important;
+        border-radius: 12px !important;
+        padding: 6px !important;
+        gap: 4px !important;
+        box-shadow: 0 4px 12px rgba(26, 42, 108, 0.25) !important;
     }
     .stTabs [data-baseweb="tab"] {
         color: #c7d2fe !important;
         font-weight: 650 !important;
-        border-radius: 10px !important;
-        padding: 11px 20px !important;
-        transition: all 0.25s ease !important;
-        border: none !important;
+        border-radius: 9px !important;
+        padding: 10px 16px !important;
+        transition: all 0.2s ease !important;
         background: transparent !important;
+        border: none !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
         background: rgba(249, 217, 118, 0.2) !important;
@@ -214,51 +202,53 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
         color: #0f172a !important;
-        box-shadow: 0 3px 12px rgba(249, 217, 118, 0.4) !important;
         font-weight: 750 !important;
+        box-shadow: 0 3px 10px rgba(249, 217, 118, 0.4) !important;
     }
 
-    /* --- BUTTONS --- */
-    .stButton>button, .stDownloadButton>button {
+    /* --- ALL BUTTONS (Dark Blue + White Text = Readable) --- */
+    .stButton > button, 
+    .stDownloadButton > button {
         width: 100% !important;
-        border-radius: 12px !important;
+        border-radius: 11px !important;
         font-weight: 700 !important;
         background: linear-gradient(135deg, #1a2a6c 0%, #243a8c 100%) !important;
         color: #ffffff !important;
         border: none !important;
-        padding: 0.65rem 1.2rem !important;
-        box-shadow: 0 4px 14px rgba(26, 42, 108, 0.3) !important;
-        transition: all 0.25s ease !important;
+        padding: 0.6rem 1.1rem !important;
+        box-shadow: 0 4px 12px rgba(26, 42, 108, 0.3) !important;
+        transition: all 0.2s ease !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.4px !important;
+        letter-spacing: 0.3px !important;
     }
-    .stButton>button:hover, .stDownloadButton>button:hover {
+    .stButton > button:hover, 
+    .stDownloadButton > button:hover {
         transform: scale(1.02) !important;
-        box-shadow: 0 6px 20px rgba(26, 42, 108, 0.45) !important;
         background: linear-gradient(135deg, #243a8c 0%, #1a2a6c 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(26, 42, 108, 0.4) !important;
+    }
+    .stButton > button p, 
+    .stDownloadButton > button p,
+    .stButton > button span, 
+    .stDownloadButton > button span {
+        color: #ffffff !important;
     }
 
     /* --- FILE UPLOADER (Colored + Readable) --- */
     .stFileUploader > div > div {
         background: linear-gradient(135deg, #1a2a6c 0%, #2a3f9e 100%) !important;
         border: 2px dashed #f9d976 !important;
-        border-radius: 14px !important;
-        padding: 18px !important;
-        color: #ffffff !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
     }
-    .stFileUploader > div > div:hover {
-        border-color: #ffe28a !important;
-        background: linear-gradient(135deg, #243a8c 0%, #1a2a6c 100%) !important;
-    }
-    .stFileUploader label, 
+    .stFileUploader label,
     .stFileUploader span,
     .stFileUploader p,
-    .stFileUploader div {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-    }
+    .stFileUploader div,
     .stFileUploader [data-testid="stFileUploaderDropzone"] {
         color: #ffffff !important;
+        font-weight: 600 !important;
     }
     .stFileUploader button {
         background: #f9d976 !important;
@@ -271,22 +261,26 @@ st.markdown("""
         background: #ffe28a !important;
         color: #0f172a !important;
     }
+    .stFileUploader button p,
+    .stFileUploader button span {
+        color: #0f172a !important;
+    }
 
     /* --- INPUTS --- */
-    .stTextInput>div>div>input, 
-    .stSelectbox>div>div, 
-    .stTextArea>div>div>textarea {
+    .stTextInput > div > div > input, 
+    .stSelectbox > div > div, 
+    .stTextArea > div > div > textarea {
         background: #ffffff !important;
         border: 1.5px solid #cbd5e1 !important;
         border-radius: 10px !important;
         color: #1e293b !important;
-        padding: 10px 14px !important;
+        padding: 9px 13px !important;
         font-weight: 500 !important;
     }
-    .stTextInput>div>div>input:focus, 
-    .stSelectbox>div>div:focus {
+    .stTextInput > div > div > input:focus, 
+    .stSelectbox > div > div:focus {
         border: 1.5px solid #1a2a6c !important;
-        box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.15) !important;
+        box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.12) !important;
     }
     label {
         color: #334155 !important;
@@ -297,12 +291,12 @@ st.markdown("""
     .stAlert {
         background: #fffbeb !important;
         border: 1px solid #f9d976 !important;
-        border-radius: 12px !important;
+        border-radius: 11px !important;
         color: #92400e !important;
         font-weight: 600 !important;
     }
     .stInfo, .stSuccess, .stError {
-        border-radius: 12px !important;
+        border-radius: 11px !important;
         font-weight: 600 !important;
     }
 </style>
@@ -312,9 +306,9 @@ st.markdown("""
 st.warning("🔒 **Data Privacy Notice:** Your document text is sent to OpenRouter (third-party AI). Do NOT upload classified or highly sensitive government documents.")
 
 # ============ LOGO (Perfect Center) ============
-st.markdown("<div style='display:flex; justify-content:center; width:100%;'>", unsafe_allow_html=True)
+st.markdown("<div style='display:flex; justify-content:center; width:100%; margin-bottom:5px;'>", unsafe_allow_html=True)
 try:
-    st.image("kp_logo.png", width=170)
+    st.image("kp_logo.png", width=160)
 except:
     st.markdown("🏛️ **Place `kp_logo.png` here**")
 st.markdown("</div>", unsafe_allow_html=True)
@@ -323,23 +317,19 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown('<h1 class="big-title">🏛️ KP Secretariat – Smart PC-1 & PDF Review Portal</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Financial Summary Extractor • Geographic Map Mapper • Hidden Issue Scanner • Official Draft Generator</p>', unsafe_allow_html=True)
 
-# ============ CONFIGURATIONS CARD ============
+# ============ CONFIGURATIONS (Empty row removed) ============
 st.markdown('<p class="config-title">⚙️ System Configurations</p>', unsafe_allow_html=True)
-cfg_l, cfg_c, cfg_r = st.columns([1, 2, 1])
-with cfg_c:
-    with st.container():
-        st.markdown('<div style="background: #f8fafc; padding: 18px; border-radius: 16px; border: 1px solid #e2e8f0;">', unsafe_allow_html=True)
-        BUILTIN_API_KEY = ""
-        api_key = st.text_input("🔑 OpenRouter API Key", value=BUILTIN_API_KEY, type="password", placeholder="Apni OpenRouter API key yahan enter karein...")
-        model_name = st.selectbox(
-            "🤖 Select AI Model via OpenRouter",
-            [
-                "meta-llama/llama-3.3-70b-instruct",
-                "google/gemini-2.0-flash-001",
-                "deepseek/deepseek-chat"
-            ]
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+
+api_key = st.text_input("🔑 OpenRouter API Key", value="", type="password", placeholder="Apni OpenRouter API key yahan enter karein...")
+model_name = st.selectbox(
+    "🤖 Select AI Model via OpenRouter",
+    [
+        "meta-llama/llama-3.3-70b-instruct",
+        "google/gemini-2.0-flash-001",
+        "deepseek/deepseek-chat"
+    ]
+)
+
 st.markdown("---")
 
 # ============ TABS ============
