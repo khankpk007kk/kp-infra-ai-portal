@@ -30,19 +30,22 @@ if "detected_districts" not in st.session_state:
 # ============ PREMIUM CUSTOM STYLING ============
 st.markdown("""
 <style>
-    /* --- FORCE DARK PREMIUM BACKGROUND --- */
+    /* --- HALF WHITE / LIGHT BACKGROUND --- */
     .stApp {
-        background: linear-gradient(135deg, #0a0f24 0%, #162254 40%, #0a0f24 80%) !important;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%) !important;
         background-attachment: fixed !important;
     }
+
+    /* Soft animated overlay */
     .stApp::before {
         content: '';
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(-45deg, #1a2a6c, #0a0f24, #2a1a4a, #0a0f24);
+        background: linear-gradient(-45deg, #f0f4ff, #e8eeff, #f5f7ff, #eef2ff);
         background-size: 400% 400%;
-        animation: gradientBG 22s ease infinite;
+        animation: gradientBG 25s ease infinite;
         z-index: -1;
+        opacity: 0.7;
     }
     @keyframes gradientBG {
         0% { background-position: 0% 50%; }
@@ -50,48 +53,49 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* --- MAIN GLASS CONTAINER --- */
+    /* --- MAIN CONTAINER --- */
     .main .block-container {
-        background: rgba(255, 255, 255, 0.07) !important;
-        backdrop-filter: blur(20px) !important;
-        -webkit-backdrop-filter: blur(20px) !important;
-        border-radius: 40px !important;
-        padding: 2.5rem 2.5rem !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border-radius: 28px !important;
+        padding: 2.2rem 2.2rem !important;
         margin-top: 15px !important;
         margin-bottom: 25px !important;
-        border: 1px solid rgba(255, 215, 0, 0.15) !important;
-        box-shadow: 0 30px 60px rgba(0,0,0,0.7) !important;
+        border: 1px solid rgba(26, 42, 108, 0.12) !important;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.08) !important;
     }
 
-    /* --- TEXT COLORS (Readable) --- */
+    /* --- TEXT COLORS (Readable on light bg) --- */
     body, p, span, label, div, .stMarkdown, caption, .stTextInput > label {
-        color: #e8eeff !important;
+        color: #1e293b !important;
         font-weight: 500 !important;
     }
     h1, h2, h3, h4, h5, .big-title, .sub-header, .config-title {
-        color: #f9d976 !important;
-        text-shadow: 0 2px 12px rgba(249, 217, 118, 0.35) !important;
+        color: #1a2a6c !important;
+        text-shadow: none !important;
     }
     .big-title {
-        font-size: 42px !important;
+        font-size: 40px !important;
         font-weight: 900 !important;
         text-align: center !important;
-        letter-spacing: 1px !important;
+        letter-spacing: 0.5px !important;
+        color: #0f172a !important;
     }
     .sub-header {
-        color: #a8c0ff !important;
-        font-size: 17px !important;
+        color: #475569 !important;
+        font-size: 16px !important;
         font-weight: 600 !important;
         text-align: center !important;
-        opacity: 0.95 !important;
     }
     .config-title {
-        font-size: 22px !important;
+        font-size: 20px !important;
         font-weight: 700 !important;
-        margin-top: 10px !important;
+        margin-top: 8px !important;
+        color: #1a2a6c !important;
     }
 
-    /* --- LOGO ANIMATION (Targets the real kp_logo.png) --- */
+    /* --- LOGO (Perfect Center + Animation) --- */
     div[data-testid="stImage"] {
         display: flex !important;
         justify-content: center !important;
@@ -99,19 +103,21 @@ st.markdown("""
         position: relative !important;
         pointer-events: none !important;
         user-select: none !important;
-        margin: 0 auto 15px auto !important;
+        margin: 0 auto 10px auto !important;
+        width: 100% !important;
     }
 
     div[data-testid="stImage"] img {
         border-radius: 50% !important;
-        width: 180px !important;
-        height: 180px !important;
+        width: 170px !important;
+        height: 170px !important;
         object-fit: cover !important;
         pointer-events: none !important;
         user-select: none !important;
-        box-shadow: 0 0 25px rgba(249, 217, 118, 0.3) !important;
+        box-shadow: 0 0 20px rgba(26, 42, 108, 0.15) !important;
         position: relative;
         z-index: 5;
+        margin: 0 auto !important;
     }
 
     /* 12-piece continuous spinning ring */
@@ -120,8 +126,8 @@ st.markdown("""
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 200px;
-        height: 200px;
+        width: 190px;
+        height: 190px;
         transform: translate(-50%, -50%);
         border-radius: 50%;
         background: repeating-conic-gradient(
@@ -158,17 +164,17 @@ st.markdown("""
         pointer-events: none !important;
     }
 
-    /* Soft glow pulse */
+    /* Soft glow */
     div[data-testid="stImage"]::after {
         content: '';
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 240px;
-        height: 240px;
+        width: 230px;
+        height: 230px;
         transform: translate(-50%, -50%);
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(249, 217, 118, 0.22) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(249, 217, 118, 0.18) 0%, transparent 70%);
         animation: pulseGlow 2.8s ease-in-out infinite alternate;
         z-index: 1;
         pointer-events: none !important;
@@ -179,102 +185,124 @@ st.markdown("""
         100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
     @keyframes pulseGlow {
-        0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.3; }
-        100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
+        0% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.35; }
+        100% { transform: translate(-50%, -50%) scale(1.18); opacity: 0.65; }
     }
 
-    /* --- NAVIGATION TABS --- */
+    /* --- TABS --- */
     .stTabs [data-baseweb="tab-list"] {
-        background: rgba(26, 42, 108, 0.75) !important;
-        backdrop-filter: blur(12px) !important;
-        border-radius: 16px !important;
-        padding: 8px !important;
-        gap: 6px !important;
-        border: 1px solid rgba(249, 217, 118, 0.25) !important;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
+        background: #1a2a6c !important;
+        border-radius: 14px !important;
+        padding: 7px !important;
+        gap: 5px !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(26, 42, 108, 0.25) !important;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #b8c9ff !important;
-        font-weight: 700 !important;
-        border-radius: 12px !important;
-        padding: 12px 22px !important;
+        color: #c7d2fe !important;
+        font-weight: 650 !important;
+        border-radius: 10px !important;
+        padding: 11px 20px !important;
         transition: all 0.25s ease !important;
         border: none !important;
         background: transparent !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(249, 217, 118, 0.18) !important;
+        background: rgba(249, 217, 118, 0.2) !important;
         color: #f9d976 !important;
     }
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
-        color: #0a0f24 !important;
-        box-shadow: 0 4px 18px rgba(249, 217, 118, 0.45) !important;
-        font-weight: 800 !important;
+        color: #0f172a !important;
+        box-shadow: 0 3px 12px rgba(249, 217, 118, 0.4) !important;
+        font-weight: 750 !important;
     }
 
     /* --- BUTTONS --- */
     .stButton>button, .stDownloadButton>button {
         width: 100% !important;
-        border-radius: 14px !important;
+        border-radius: 12px !important;
         font-weight: 700 !important;
-        background: linear-gradient(135deg, #f9d976 0%, #f4b836 100%) !important;
-        color: #0a0f24 !important;
+        background: linear-gradient(135deg, #1a2a6c 0%, #243a8c 100%) !important;
+        color: #ffffff !important;
         border: none !important;
         padding: 0.65rem 1.2rem !important;
-        box-shadow: 0 6px 20px rgba(249, 217, 118, 0.3) !important;
+        box-shadow: 0 4px 14px rgba(26, 42, 108, 0.3) !important;
         transition: all 0.25s ease !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
+        letter-spacing: 0.4px !important;
     }
     .stButton>button:hover, .stDownloadButton>button:hover {
         transform: scale(1.02) !important;
-        box-shadow: 0 8px 28px rgba(249, 217, 118, 0.55) !important;
-        background: linear-gradient(135deg, #ffe28a 0%, #f9c830 100%) !important;
+        box-shadow: 0 6px 20px rgba(26, 42, 108, 0.45) !important;
+        background: linear-gradient(135deg, #243a8c 0%, #1a2a6c 100%) !important;
+    }
+
+    /* --- FILE UPLOADER (Colored + Readable) --- */
+    .stFileUploader > div > div {
+        background: linear-gradient(135deg, #1a2a6c 0%, #2a3f9e 100%) !important;
+        border: 2px dashed #f9d976 !important;
+        border-radius: 14px !important;
+        padding: 18px !important;
+        color: #ffffff !important;
+    }
+    .stFileUploader > div > div:hover {
+        border-color: #ffe28a !important;
+        background: linear-gradient(135deg, #243a8c 0%, #1a2a6c 100%) !important;
+    }
+    .stFileUploader label, 
+    .stFileUploader span,
+    .stFileUploader p,
+    .stFileUploader div {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    .stFileUploader [data-testid="stFileUploaderDropzone"] {
+        color: #ffffff !important;
+    }
+    .stFileUploader button {
+        background: #f9d976 !important;
+        color: #0f172a !important;
+        border: none !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+    }
+    .stFileUploader button:hover {
+        background: #ffe28a !important;
+        color: #0f172a !important;
     }
 
     /* --- INPUTS --- */
     .stTextInput>div>div>input, 
     .stSelectbox>div>div, 
     .stTextArea>div>div>textarea {
-        background: rgba(255, 255, 255, 0.09) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(249, 217, 118, 0.35) !important;
-        border-radius: 12px !important;
-        color: #f0f4ff !important;
-        padding: 10px 15px !important;
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        color: #1e293b !important;
+        padding: 10px 14px !important;
         font-weight: 500 !important;
     }
     .stTextInput>div>div>input:focus, 
     .stSelectbox>div>div:focus {
-        border: 1px solid #f9d976 !important;
-        box-shadow: 0 0 18px rgba(249, 217, 118, 0.2) !important;
+        border: 1.5px solid #1a2a6c !important;
+        box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.15) !important;
     }
     label {
-        color: #b8c9ff !important;
+        color: #334155 !important;
         font-weight: 600 !important;
     }
 
-    /* --- ALERTS & UPLOADER --- */
+    /* --- ALERTS --- */
     .stAlert {
-        background: rgba(249, 217, 118, 0.12) !important;
+        background: #fffbeb !important;
         border: 1px solid #f9d976 !important;
-        border-radius: 16px !important;
-        color: #f9d976 !important;
+        border-radius: 12px !important;
+        color: #92400e !important;
         font-weight: 600 !important;
     }
-    .stFileUploader > div > div {
-        background: rgba(255,255,255,0.05) !important;
-        border: 2px dashed rgba(249, 217, 118, 0.4) !important;
-        border-radius: 16px !important;
-        padding: 20px !important;
-    }
-    .stFileUploader > div > div:hover {
-        border-color: #f9d976 !important;
-        background: rgba(249, 217, 118, 0.06) !important;
-    }
     .stInfo, .stSuccess, .stError {
-        border-radius: 14px !important;
+        border-radius: 12px !important;
         font-weight: 600 !important;
     }
 </style>
@@ -283,13 +311,13 @@ st.markdown("""
 # ============ DATA PRIVACY WARNING ============
 st.warning("🔒 **Data Privacy Notice:** Your document text is sent to OpenRouter (third-party AI). Do NOT upload classified or highly sensitive government documents.")
 
-# ============ LOGO (Same kp_logo.png + Animation) ============
-lc1, lc2, lc3 = st.columns([1, 1.2, 1])
-with lc2:
-    try:
-        st.image("kp_logo.png", use_container_width=True)
-    except:
-        st.markdown("🏛️ **Place `kp_logo.png` here**")
+# ============ LOGO (Perfect Center) ============
+st.markdown("<div style='display:flex; justify-content:center; width:100%;'>", unsafe_allow_html=True)
+try:
+    st.image("kp_logo.png", width=170)
+except:
+    st.markdown("🏛️ **Place `kp_logo.png` here**")
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ============ TITLE ============
 st.markdown('<h1 class="big-title">🏛️ KP Secretariat – Smart PC-1 & PDF Review Portal</h1>', unsafe_allow_html=True)
@@ -300,7 +328,7 @@ st.markdown('<p class="config-title">⚙️ System Configurations</p>', unsafe_a
 cfg_l, cfg_c, cfg_r = st.columns([1, 2, 1])
 with cfg_c:
     with st.container():
-        st.markdown('<div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; border: 1px solid rgba(249,217,118,0.2);">', unsafe_allow_html=True)
+        st.markdown('<div style="background: #f8fafc; padding: 18px; border-radius: 16px; border: 1px solid #e2e8f0;">', unsafe_allow_html=True)
         BUILTIN_API_KEY = ""
         api_key = st.text_input("🔑 OpenRouter API Key", value=BUILTIN_API_KEY, type="password", placeholder="Apni OpenRouter API key yahan enter karein...")
         model_name = st.selectbox(
