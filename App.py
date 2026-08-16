@@ -63,7 +63,7 @@ st.markdown("""
         box-shadow: 0 30px 60px rgba(0,0,0,0.7) !important;
     }
 
-    /* --- TEXT COLORS (Improved Readability) --- */
+    /* --- TEXT COLORS (Readable) --- */
     body, p, span, label, div, .stMarkdown, caption, .stTextInput > label {
         color: #e8eeff !important;
         font-weight: 500 !important;
@@ -91,24 +91,38 @@ st.markdown("""
         margin-top: 10px !important;
     }
 
-    /* --- LOGO WRAPPER (Non-clickable + 12-piece continuous animation) --- */
-    .logo-wrapper {
-        position: relative;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 200px;
-        height: 200px;
-        margin: 0 auto 10px auto;
-        pointer-events: none !important;   /* LOGO CLICKABLE NAHI HOGI */
+    /* --- LOGO ANIMATION (Targets the real kp_logo.png) --- */
+    div[data-testid="stImage"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        position: relative !important;
+        pointer-events: none !important;
         user-select: none !important;
+        margin: 0 auto 15px auto !important;
     }
 
-    /* 12-piece spinning ring */
-    .logo-wrapper::before {
+    div[data-testid="stImage"] img {
+        border-radius: 50% !important;
+        width: 180px !important;
+        height: 180px !important;
+        object-fit: cover !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        box-shadow: 0 0 25px rgba(249, 217, 118, 0.3) !important;
+        position: relative;
+        z-index: 5;
+    }
+
+    /* 12-piece continuous spinning ring */
+    div[data-testid="stImage"]::before {
         content: '';
         position: absolute;
-        top: -8px; left: -8px; right: -8px; bottom: -8px;
+        top: 50%;
+        left: 50%;
+        width: 200px;
+        height: 200px;
+        transform: translate(-50%, -50%);
         border-radius: 50%;
         background: repeating-conic-gradient(
             from 0deg,
@@ -144,41 +158,29 @@ st.markdown("""
         pointer-events: none !important;
     }
 
-    /* Soft glow behind logo */
-    .logo-wrapper::after {
+    /* Soft glow pulse */
+    div[data-testid="stImage"]::after {
         content: '';
         position: absolute;
-        top: -20px; left: -20px; right: -20px; bottom: -20px;
+        top: 50%;
+        left: 50%;
+        width: 240px;
+        height: 240px;
+        transform: translate(-50%, -50%);
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(249, 217, 118, 0.25) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(249, 217, 118, 0.22) 0%, transparent 70%);
         animation: pulseGlow 2.8s ease-in-out infinite alternate;
         z-index: 1;
         pointer-events: none !important;
     }
 
     @keyframes spinRing {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
     @keyframes pulseGlow {
-        0% { transform: scale(0.92); opacity: 0.35; }
-        100% { transform: scale(1.25); opacity: 0.75; }
-    }
-
-    /* Logo image - static (no spin) + not clickable */
-    .logo-wrapper img,
-    .logo-wrapper [data-testid="stImage"] img {
-        border-radius: 50% !important;
-        width: 180px !important;
-        height: 180px !important;
-        object-fit: cover !important;
-        box-shadow: 0 0 25px rgba(249, 217, 118, 0.25) !important;
-        pointer-events: none !important;
-        user-select: none !important;
-        display: block !important;
-        margin: 0 auto !important;
-        position: relative;
-        z-index: 3;
+        0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.3; }
+        100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
     }
 
     /* --- NAVIGATION TABS --- */
@@ -281,15 +283,13 @@ st.markdown("""
 # ============ DATA PRIVACY WARNING ============
 st.warning("🔒 **Data Privacy Notice:** Your document text is sent to OpenRouter (third-party AI). Do NOT upload classified or highly sensitive government documents.")
 
-# ============ LOGO (CENTER) - Non-clickable + 12-piece continuous ring ============
+# ============ LOGO (Same kp_logo.png + Animation) ============
 lc1, lc2, lc3 = st.columns([1, 1.2, 1])
 with lc2:
-    st.markdown('<div class="logo-wrapper">', unsafe_allow_html=True)
     try:
         st.image("kp_logo.png", use_container_width=True)
     except:
         st.markdown("🏛️ **Place `kp_logo.png` here**")
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # ============ TITLE ============
 st.markdown('<h1 class="big-title">🏛️ KP Secretariat – Smart PC-1 & PDF Review Portal</h1>', unsafe_allow_html=True)
